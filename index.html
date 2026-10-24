@@ -73,7 +73,7 @@ const id=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice
 const key=n=>n.trim().toLowerCase();
 const ST={get(k){try{return localStorage.getItem(k)}catch{return null}},set(k,v){try{localStorage.setItem(k,v)}catch{}}};
 const TYPES={wa:'WhatsApp 客人',sm:'99 Speedmart',gi:'Giant',my:'Mydin',cafe:'Coffee shop',cake:'蛋糕店'};
-const ROLES={admin:'管理员',manager:'负责人',driver:'司机'};
+const ROLES={admin:'管理员',manager:'负责人',warehouse:'仓库员工',driver:'司机'};
 const DEF_MIN={wa:1,sm:2,gi:2,my:2,cafe:1,cake:1};
 const DEF_PRODUCTS=[
  ['Farm Fresh Fresh Milk 1L','鲜奶'],['Farm Fresh Fresh Milk 2L','鲜奶'],['Farm Fresh Fresh Milk 200ml','鲜奶'],
@@ -96,13 +96,14 @@ function toEmail(v){
 const isPhone=v=>!(v||'').includes('@');
 const uname=i=>S.users.find(u=>u.id===i)?.name||'未分配';
 const drivers=()=>S.users.filter(u=>u.role==='driver'&&u.active);
-const isMgr=()=>me&&me.role!=='driver';
+const isMgr=()=>me&&(me.role==='admin'||me.role==='manager');
+const canStock=()=>me&&me.role!=='driver';
 const FULL=/[?&]full=1/.test(location.search);
 const TABS=FULL?{
   admin:[['plan','📋 排单'],['stock','📦 仓库'],['driver','🚚 司机'],['users','👥 用户'],['set','⚙️ 设置']],
   manager:[['plan','📋 排单'],['stock','📦 仓库'],['driver','🚚 司机'],['set','⚙️ 设置']],
-  driver:[['driver','🚚 我的路线']]}:{
-  admin:[['stock','📥 进货'],['inv','📋 库存'],['users','👥 用户']],manager:[['stock','📥 进货'],['inv','📋 库存']],driver:[['driver','🚚 我的路线']]};
+  warehouse:[['stock','📦 仓库']],driver:[['driver','🚚 我的路线']]}:{
+  admin:[['stock','📥 进货'],['inv','📋 库存'],['users','👥 用户']],manager:[['stock','📥 进货'],['inv','📋 库存']],warehouse:[['stock','📥 进货'],['inv','📋 库存']],driver:[['driver','🚚 我的路线']]};
 
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.remove('hide');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.add('hide'),5000)}
 
@@ -143,11 +144,11 @@ async function loadStock(){
   const[bt,sk,mv]=await Promise.all([
     sb.from('batches').select('*').eq('closed',false),
     sb.rpc('stock_by_batch'),
-    isMgr()?sb.from('stock_moves').select('*').order('created_at',{ascending:false}).limit(120):Promise.resolve({data:[]})]);
+    canStock()?sb.from('stock_moves').select('*').order('created_at',{ascending:false}).limit(120):Promise.resolve({data:[]})]);
   const bad=[bt,sk,mv].find(r=>r.error);if(bad)throw new Error(bad.error.message);
   const sm={};sk.data.forEach(r=>sm[r.batch_id]=r.qty);
   S.batches=bt.data.map(b=>({...b,qty:sm[b.id]||0}));S.moves=mv.data;
-  if(isMgr()){ // 库存清零超过一天的批次自动收起
+  if(canStock()){ // 库存清零超过一天的批次自动收起
     const dead=S.batches.filter(b=>b.qty<=0&&Date.now()-new Date(b.created_at)>864e5);
     if(dead.length){await sb.from('batches').update({closed:true}).in('id',dead.map(b=>b.id));S.batches=S.batches.filter(b=>!dead.includes(b))}
   }
@@ -452,13 +453,13 @@ function vUsers(){
   <details class="card"><summary><b>➕ 新增用户</b></summary>
    <label>名字</label><input id="u_name">
    <label>登入用的 电话号码 或 Email</label><input id="u_id" placeholder="012-3456789 / name@email.com">
-   <label>角色</label><select id="u_role"><option value="manager">负责人 — 可进货、点货、看库存、修改</option><option value="driver">司机 — 只能看送货路线</option><option value="admin">管理员 — 还能新增和管理用户</option></select>
+   <label>角色</label><select id="u_role"><option value="warehouse">仓库员工 — 只能进货、点货、看库存、修改库存</option><option value="manager">负责人 — 还能排单、改产品库</option><option value="driver">司机 — 只能看送货路线</option><option value="admin">管理员 — 还能新增和管理用户</option></select>
    <label>临时密码 (至少 6 位)</label><div class="row"><input id="u_pw" class="grow" value="${genPw()}"><button class="btn sec sm" data-act="genpw" data-v="u_pw">重新生成</button></div>
    <button class="btn" style="width:100%;margin-top:12px" data-act="addUser">创建用户</button>
   </details>
   <h2>所有用户 (${S.users.length})</h2>
   ${S.users.map(u=>`<div class="card ${u.active?'':'done'}">
-    <div class="row"><b class="grow">${esc(u.name)}</b><span class="badge ${u.role==='admin'?'warn':u.role==='manager'?'ok':'gray'}">${ROLES[u.role]}</span>${u.active?'':'<span class="badge bad">已停用</span>'}</div>
+    <div class="row"><b class="grow">${esc(u.name)}</b><span class="badge ${u.role==='admin'?'warn':u.role==='manager'||u.role==='warehouse'?'ok':'gray'}">${ROLES[u.role]}</span>${u.active?'':'<span class="badge bad">已停用</span>'}</div>
     <div class="mut">${isPhone(u.identifier)?'📞':'✉️'} ${esc(u.identifier)}${u.id===me.id?' (你)':''}</div>
     ${ui.reset===u.id?`<label>新密码</label><div class="row"><input id="rp_pw" class="grow" value="${genPw()}"><button class="btn sec sm" data-act="genpw" data-v="rp_pw">重新生成</button></div>
       <div class="row" style="margin-top:8px"><button class="btn sm" data-act="doreset" data-v="${u.id}">确认重设</button><button class="btn sec sm" data-act="cancelreset">取消</button></div>`:`
@@ -658,6 +659,7 @@ document.addEventListener('click',onEv);
 document.addEventListener('change',onEv);
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.closest?.('[data-enter]'))document.querySelector('[data-primary]')?.click()});
 const MGR_ONLY=new Set(['saveStop','cancelEdit','edit','del','dup','up','down','pick','pname','pcat','pmin','pdel','clrcodes','padd','scanBind','saveSet','copyRoute','export','rvdate','plusone','sqDone','invRefresh','invEdit','invDmg','invCancel','invEditSave','invDmgSave','rvNewBatch','rvPick','rvUndo','scanChoose','noop','assign2','pper','stockmode','openP','recvOpen','rvClose','rvAdd','rvDel','rvf','rvScan','rvSave','dmgOpen','dmgClose','dmf','dmSave','countOpen','countClose','ctSave','ctScan']);
+const WH_OK=new Set(['openP','rvClose','rvAdd','rvDel','rvf','rvScan','rvSave','rvdate','plusone','sqDone','rvNewBatch','rvPick','rvUndo','scanChoose','noop','assign2','invRefresh','invEdit','invDmg','invCancel','invEditSave','invDmgSave','recvOpen']);
 const ADMIN_ONLY=new Set(['addUser','askreset','doreset','toggleUser','delUser','urole','genpw','cancelreset','copynote','clearnote']);
 async function onEv(ev){
   const t=ev.target.closest('[data-act]');if(!t)return;
@@ -666,7 +668,7 @@ async function onEv(ev){
   if(chg.includes(a)!==isChange)return;
   if(t.tagName==='A')ev.preventDefault();
   if(ui.screen==='app'){
-    if(MGR_ONLY.has(a)&&!isMgr())return;
+    if(MGR_ONLY.has(a)&&!isMgr()&&!(me.role==='warehouse'&&WH_OK.has(a)))return;
     if(ADMIN_ONLY.has(a)&&me.role!=='admin')return;
   }
   rev++;
@@ -978,7 +980,7 @@ function withProduct(code,fn){
     scanCtx.pending=fn;scanCtx.code=code;
     return `<div>这个条码对应多个产品，请选 <span class="mut">(选一次，以后自动记住)</span>：</div>`+cand.slice(0,8).map(c=>`<button class="btn sec" style="width:100%;text-align:left;margin-top:4px" data-act="scanChoose" data-v="${c.p.id}" data-k="${c.ctn?'c':'u'}">${esc(c.p.name)} ${c.ctn?'(整箱)':'(单件)'}</button>`).join('')}
   scanCtx.code=code;
-  if(!isMgr())return `<span class="badge warn">⚠ 这个条码还没登记 (${esc(code)})</span> 请通知负责人，或手动打勾。`;
+  if(!canStock())return `<span class="badge warn">⚠ 这个条码还没登记 (${esc(code)})</span> 请通知负责人，或手动打勾。`;
   return `<div>新条码 <b>${esc(code)}</b>，是哪个产品？</div><div class="row"><input id="sq" class="grow" placeholder="输入产品名搜索" data-act="noop"></div><div id="sres" class="mut">先输入产品名</div>
    <div class="mut" style="margin-top:6px">找到后选「单件」或「整箱」：</div>`}
 const loadScript=u=>new Promise((ok,no)=>{const e=document.createElement('script');e.src=u;e.onload=ok;e.onerror=()=>no(new Error('载入失败 '+u));setTimeout(()=>no(new Error('载入超时 '+u)),15000);document.head.appendChild(e)});
