@@ -1,0 +1,1069 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Infinity 司机排程</title>
+<style>
+:root{--bg:#f4f6f3;--card:#fff;--ink:#1f2a1f;--mut:#6b776b;--green:#2e7d32;--gl:#e6f4e7;--red:#c62828;--rl:#fdeaea;--org:#e65100;--ol:#fff1e0;--line:#dde3dc}
+@media(prefers-color-scheme:dark){:root{--bg:#121512;--card:#1c211c;--ink:#e8efe8;--mut:#93a093;--gl:#17301a;--rl:#3a1a1a;--ol:#3a2810;--line:#2e362e;--green:#66bb6a;--red:#ef5350;--org:#ffa726}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,"Microsoft YaHei",sans-serif}
+header{position:sticky;top:0;background:#2e7d32;color:#fff;padding:10px 16px;z-index:5}
+header h1{margin:0;font-size:17px}
+.who{font-size:13px;opacity:.9}
+nav{display:flex;gap:6px;margin-top:8px}
+nav button{flex:1;padding:8px 4px;border:0;border-radius:8px;background:rgba(255,255,255,.2);color:#fff;font-size:14px}
+nav button.on{background:#fff;color:#2e7d32;font-weight:700}
+main{padding:12px 16px 80px;max-width:720px;margin:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grow{flex:1}
+input,select,textarea,button{font:inherit;color:inherit}
+input,select,textarea{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+label{display:block;font-size:13px;color:var(--mut);margin:8px 0 3px}
+.btn{padding:10px 14px;border:0;border-radius:8px;background:var(--green);color:#fff;font-weight:600}
+.btn.sec{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+.btn.red{background:var(--red)}
+.btn.sm{padding:5px 9px;font-size:13px}
+.btn:disabled{opacity:.4}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:700}
+.ok{background:var(--gl);color:var(--green)}.bad{background:var(--rl);color:var(--red)}.warn{background:var(--ol);color:var(--org)}.gray{background:var(--bg);color:var(--mut)}
+h2{font-size:16px;margin:18px 0 4px}
+.mut{color:var(--mut);font-size:13px}
+.item{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.item input[type=checkbox]{width:24px;height:24px;flex:none}
+.item .nm{flex:1}
+.done{opacity:.55}
+a{color:var(--green)}
+.hide{display:none}
+.login{max-width:380px;margin:8vh auto 0}
+.login h1{text-align:center;font-size:22px;margin:0 0 4px}
+.err{color:var(--red);font-size:14px;margin-top:8px}
+.note{color:var(--green);font-size:14px;margin-top:8px}
+#scanm{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.75);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sbox{background:var(--card);width:100%;max-width:720px;padding:12px;border-radius:16px 16px 0 0;max-height:92vh;overflow:auto}
+.sbox video{width:100%;max-height:38vh;background:#000;border-radius:10px;margin:8px 0;object-fit:cover}
+#sbox_v{position:relative}
+.aim{position:absolute;left:8%;right:8%;top:28%;bottom:28%;border:3px solid rgba(255,255,255,.9);border-radius:10px;box-shadow:0 0 0 999px rgba(0,0,0,.28);pointer-events:none}
+#smsg{min-height:44px;margin:6px 0;font-size:15px}
+#toast{position:fixed;left:12px;right:12px;bottom:12px;background:var(--red);color:#fff;padding:10px 14px;border-radius:10px;z-index:30;text-align:center}
+</style>
+</head>
+<body>
+<header id="hdr" class="hide">
+  <div class="row"><h1 class="grow">🚚 Infinity 司机排程</h1><span class="who" id="who"></span></div>
+  <nav id="nav"></nav>
+</header>
+<main id="app"></main>
+<div id="toast" class="hide"></div>
+
+<script>
+/* Farm Fresh 产品库 — 来自 Bar Code (Sales & Marketing) 27.1.2026.xlsx */
+const CATALOG=[{"id":"ff-bt-2","name":"Farm Fresh Salted Butter 200g x 40","cat":"牛油","codes":["9555487803152"],"ctnCodes":["9555487806900"],"perCtn":40},{"id":"ff-bt-3","name":"Farm Fresh Salted Butter 200g x 40 (Food Service Pack)","cat":"牛油","codes":["9555487803701"],"ctnCodes":["9555487807433"],"perCtn":40},{"id":"ff-bt-4","name":"Farm Fresh Salted Butter 250g x 40 (PROFESSIONAL)","cat":"牛油","codes":["9555487808522"],"ctnCodes":["9555487807709"],"perCtn":40},{"id":"ff-bt-5","name":"Farm Fresh Salted Butter 1kg x 10 sheet","cat":"牛油","codes":["9555487803169"],"ctnCodes":["9555487806917"],"perCtn":10},{"id":"ff-bt-6","name":"Farm Fresh Salted Butter 9g x 200","cat":"牛油","codes":[],"ctnCodes":["9555487806924"],"perCtn":200},{"id":"ff-bt-7","name":"Farm Fresh Salted Butter 9g x 12 pcs x 16 box","cat":"牛油","codes":["9555487808768"],"ctnCodes":["9555487807891"],"perCtn":null},{"id":"ff-bt-8","name":"Farm Fresh Salted Butter 25kg","cat":"牛油","codes":[],"ctnCodes":["9555487807587"],"perCtn":null},{"id":"ff-bt-9","name":"Farm Fresh salted Butter 1kg x 25 blocks","cat":"牛油","codes":[],"ctnCodes":["9555487808010"],"perCtn":25},{"id":"ff-bt-10","name":"Farm Fresh salted Butter 2.5kg x 10 blocks","cat":"牛油","codes":[],"ctnCodes":["9555487808041"],"perCtn":10},{"id":"ff-bt-11","name":"Farm Fresh salted Butter 5kg x 5 blocks","cat":"牛油","codes":[],"ctnCodes":["9555487808065"],"perCtn":5},{"id":"ff-bt-13","name":"Farm Fresh Unsalted Butter 200g x 40 (Lactic)","cat":"牛油","codes":["9555487803176"],"ctnCodes":["9555487806931"],"perCtn":40},{"id":"ff-bt-14","name":"Farm Fresh Unsalted Butter 200g x 40 (Food Service Pack) (Lactic)","cat":"牛油","codes":["9555487803695"],"ctnCodes":["9555487807426"],"perCtn":40},{"id":"ff-bt-15","name":"Farm Fresh Unsalted Butter 250g x 40 (PROFESSIONAL) (Lactic)","cat":"牛油","codes":["9555487808539"],"ctnCodes":["9555487807716"],"perCtn":40},{"id":"ff-bt-16","name":"Farm Fresh Unsalted Butter 1kg x 10 sheet (Lactic)","cat":"牛油","codes":["9555487803183"],"ctnCodes":["9555487806948"],"perCtn":10},{"id":"ff-bt-17","name":"Farm Fresh Unsalted Butter 1kg x 10 sheet (Sweet)","cat":"牛油","codes":[],"ctnCodes":[],"perCtn":10},{"id":"ff-bt-18","name":"Farm Fresh Unsalted Butter 9g x 200 (Lactic)","cat":"牛油","codes":[],"ctnCodes":["9555487806955"],"perCtn":200},{"id":"ff-bt-19","name":"Farm Fresh unsalted Butter 9g x 12 pcs x 16 box (Lactic)","cat":"牛油","codes":["9555487808751"],"ctnCodes":["9555487807884"],"perCtn":null},{"id":"ff-bt-20","name":"Farm Fresh Unsalted Butter 25kg (Sweet)","cat":"牛油","codes":[],"ctnCodes":["9555487807594"],"perCtn":null},{"id":"ff-bt-21","name":"Farm Fresh Unsalted Butter 25kg (Lactic)","cat":"牛油","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-bt-22","name":"Farm Fresh Unsalted Butter 1kg x 25 blocks (Lactic)","cat":"牛油","codes":[],"ctnCodes":["9555487808027"],"perCtn":25},{"id":"ff-bt-23","name":"Farm Fresh Unsalted Butter 1kg x 25 blocks (Sweet)","cat":"牛油","codes":[],"ctnCodes":[],"perCtn":25},{"id":"ff-bt-24","name":"Farm Fresh Unsalted Butter 2.5kg x 10 blocks (Sweet)","cat":"牛油","codes":[],"ctnCodes":["9555487808058"],"perCtn":10},{"id":"ff-bt-25","name":"Farm Fresh Unsalted Butter 2.5kg x 10 blocks (Lactic )","cat":"牛油","codes":[],"ctnCodes":[],"perCtn":10},{"id":"ff-bt-26","name":"Farm Fresh Unsalted Butter 5kg x 5 blocks (Sweet)","cat":"牛油","codes":[],"ctnCodes":["9555487808072"],"perCtn":5},{"id":"ff-bt-27","name":"Farm Fresh Unsalted Butter 5kg x 5 blocks (Lactic )","cat":"牛油","codes":[],"ctnCodes":[],"perCtn":5},{"id":"ff-ps-3","name":"Farm Fresh Fresh Milk 1L","cat":"鲜奶","codes":["9555487800052"],"ctnCodes":["9555487805002"],"perCtn":null},{"id":"ff-ps-4","name":"Farm Fresh Fresh Milk 2L","cat":"鲜奶","codes":["9555487800038"],"ctnCodes":["9555487805019"],"perCtn":null},{"id":"ff-ps-5","name":"Farm Fresh Fresh Milk 200mL","cat":"鲜奶","codes":["9555487800069"],"ctnCodes":["9555487805286"],"perCtn":null},{"id":"ff-ps-6","name":"Farm Fresh Fresh Milk 568mL","cat":"鲜奶","codes":["9555487800588"],"ctnCodes":["9555487805453"],"perCtn":null},{"id":"ff-ps-8","name":"Farm Fresh Skinny (Low Fat) 1L","cat":"鲜奶","codes":["9555487800120"],"ctnCodes":["9555487805026"],"perCtn":null},{"id":"ff-ps-9","name":"Farm Fresh Skinny (Low Fat) 2L","cat":"鲜奶","codes":["9555487800168"],"ctnCodes":["9555487805033"],"perCtn":null},{"id":"ff-ps-10","name":"Farm Fresh Skinny (Low Fat) 200mL","cat":"鲜奶","codes":["9555487800113"],"ctnCodes":["9555487805293"],"perCtn":null},{"id":"ff-ps-11","name":"Farm Fresh Skinny (Low Fat) 568mL","cat":"鲜奶","codes":["9555487800571"],"ctnCodes":["9555487805460"],"perCtn":null},{"id":"ff-ps-13","name":"Farm Fresh Chocolate Cows Milk 1L","cat":"鲜奶","codes":["9555487800137"],"ctnCodes":["9555487805064"],"perCtn":null},{"id":"ff-ps-14","name":"Farm Fresh Chocolate Cows Milk 200 ML","cat":"鲜奶","codes":["9555487800144"],"ctnCodes":["9555487805149"],"perCtn":null},{"id":"ff-ps-15","name":"Farm Fresh Chocolate Cows Milk 568 ML","cat":"鲜奶","codes":["9555487800564"],"ctnCodes":["9555487805477"],"perCtn":null},{"id":"ff-ps-17","name":"Farm Fresh Chocolate Lactose Free","cat":"鲜奶","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-ps-19","name":"Farm Fresh Natural Yogurt 1.5KG-> 1.4kg","cat":"鲜奶","codes":["9555487800083"],"ctnCodes":["9555487805057"],"perCtn":null},{"id":"ff-ps-20","name":"Farm Fresh Natural Yogurt 400g","cat":"鲜奶","codes":["9555487800076"],"ctnCodes":["9555487805040"],"perCtn":null},{"id":"ff-ps-21","name":"Farm Fresh Skinny Yogurt (Low Fat) 1.5KG->1.4kg","cat":"鲜奶","codes":["9555487800175"],"ctnCodes":["9555487805088"],"perCtn":null},{"id":"ff-ps-22","name":"Farm Fresh Skinny Yogurt (Low Fat) 400g","cat":"鲜奶","codes":["9555487800182"],"ctnCodes":["9555487805071"],"perCtn":null},{"id":"ff-ps-24","name":"Farm Fresh Mango Tango 700ML","cat":"鲜奶","codes":["9555487800274"],"ctnCodes":["9555487805118"],"perCtn":null},{"id":"ff-ps-25","name":"Farm Fresh Mango Tango 200ML","cat":"鲜奶","codes":["9555487801547"],"ctnCodes":["9555487805316"],"perCtn":null},{"id":"ff-ps-26","name":"Farm Fresh Mixed Berries 700ML","cat":"鲜奶","codes":["9555487800250"],"ctnCodes":["9555487805125"],"perCtn":null},{"id":"ff-ps-27","name":"Farm Fresh Mixed Berries 200ML","cat":"鲜奶","codes":["9555487801523"],"ctnCodes":["9555487805330"],"perCtn":null},{"id":"ff-ps-28","name":"Farm Fresh Original Natural 700ML","cat":"鲜奶","codes":["9555487800243"],"ctnCodes":["9555487805101"],"perCtn":null},{"id":"ff-ps-29","name":"Farm Fresh Original Natural 200ML","cat":"鲜奶","codes":["9555487801516"],"ctnCodes":["9555487805309"],"perCtn":null},{"id":"ff-ps-30","name":"Farm Fresh Strawberries 700ML","cat":"鲜奶","codes":["9555487800267"],"ctnCodes":["9555487805132"],"perCtn":null},{"id":"ff-ps-31","name":"Farm Fresh Strawberries 200ML","cat":"鲜奶","codes":["9555487801530"],"ctnCodes":["9555487805323"],"perCtn":null},{"id":"ff-ps-32","name":"Farm Fresh Lychee Yogurt Drink 700g","cat":"鲜奶","codes":["9555487801790"],"ctnCodes":["9555487805712"],"perCtn":null},{"id":"ff-ps-33","name":"Farm Fresh Lychee Yogurt Drink 200g","cat":"鲜奶","codes":["9555487801806"],"ctnCodes":["9555487805729"],"perCtn":null},{"id":"ff-ps-34","name":"Farm Fresh Fruit Punch Yogurt Drink 700g","cat":"鲜奶","codes":["9555487801813"],"ctnCodes":["9555487805736"],"perCtn":null},{"id":"ff-ps-35","name":"Farm Fresh Fruit Punch Yogurt Drink 200g","cat":"鲜奶","codes":["9555487801820"],"ctnCodes":["9555487805743"],"perCtn":null},{"id":"ff-ps-37","name":"Farm Fresh Cafe Latte 700ml","cat":"鲜奶","codes":["9555487801561"],"ctnCodes":["9555487805194"],"perCtn":null},{"id":"ff-ps-38","name":"Farm Fresh Cafe Latte 200ml","cat":"鲜奶","codes":["9555487801554"],"ctnCodes":["9555487805187"],"perCtn":null},{"id":"ff-ps-40","name":"Farm Fresh Café Latte Tongkat Ali 200mL","cat":"鲜奶","codes":["9555487800229"],"ctnCodes":["9555487805262"],"perCtn":null},{"id":"ff-ps-42","name":"Farm Fresh Café Mocha Flavoured Milk","cat":"鲜奶","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-ps-44","name":"Junior Culture Milk Natural 100g x 5","cat":"鲜奶","codes":[],"ctnCodes":[],"perCtn":5},{"id":"ff-ps-45","name":"Junior Culture Milk Mixed 100g x 5","cat":"鲜奶","codes":[],"ctnCodes":[],"perCtn":5},{"id":"ff-ps-46","name":"Junior Culture Milk Twin 100 g x 5 x 2","cat":"鲜奶","codes":[],"ctnCodes":[],"perCtn":2},{"id":"ff-ps-48","name":"Nubian Goat's Milk Ori 700ML (ALITA)","cat":"鲜奶","codes":["9555487800090"],"ctnCodes":[],"perCtn":null},{"id":"ff-ps-49","name":"Nubian Goats Milk- Original 200mL","cat":"鲜奶","codes":["9555487807778"],"ctnCodes":["9555487805095"],"perCtn":null},{"id":"ff-ps-50","name":"Nubian Goat's Milk Choco 700ML","cat":"鲜奶","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-ps-51","name":"Nubian Goat's Yogurt 700ML","cat":"鲜奶","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-ps-53","name":"Farm Fresh Kurma Fresh Milk 700ML","cat":"鲜奶","codes":["9555487800199"],"ctnCodes":["9555487805408"],"perCtn":null},{"id":"ff-ps-54","name":"Farm Fresh Kurma Fresh Milk 1L","cat":"鲜奶","codes":["9555487800199"],"ctnCodes":[],"perCtn":null},{"id":"ff-ps-55","name":"Farm Fresh Kurma Fresh Milk 2L","cat":"鲜奶","codes":["9555487800694"],"ctnCodes":["9555487805446"],"perCtn":null},{"id":"ff-ps-56","name":"Farm Fresh Kurma Fresh Milk 200mL","cat":"鲜奶","codes":["9555487800687"],"ctnCodes":["9555487804500"],"perCtn":null},{"id":"ff-ps-57","name":"Farm Fresh Kurma Kismis","cat":"鲜奶","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-ps-59","name":"Farm Fresh Farm Yogurt- Mango","cat":"鲜奶","codes":["9555487800915"],"ctnCodes":["9555487804906"],"perCtn":null},{"id":"ff-ps-60","name":"Farm Fresh Farm Yogurt- Peach","cat":"鲜奶","codes":["9555487800885"],"ctnCodes":["9555487804876"],"perCtn":null},{"id":"ff-ps-61","name":"Farm Fresh Farm Yogurt- Apricot","cat":"鲜奶","codes":["9555487800878"],"ctnCodes":["9555487804869"],"perCtn":null},{"id":"ff-ps-62","name":"Farm Fresh Farm Yogurt- Strawberry","cat":"鲜奶","codes":["9555487800939"],"ctnCodes":["9555487804920"],"perCtn":null},{"id":"ff-ps-63","name":"Farm Fresh Farm Yogurt- Mixed Berries","cat":"鲜奶","codes":["9555487800922"],"ctnCodes":["9555487804913"],"perCtn":null},{"id":"ff-ps-64","name":"Farm Fresh Farm Yogurt- Pumpkin","cat":"鲜奶","codes":["9555487800892"],"ctnCodes":["9555487804883"],"perCtn":null},{"id":"ff-ps-65","name":"Farm Fresh Farm Yogurt- Natural","cat":"鲜奶","codes":["9555487800908"],"ctnCodes":["9555487804890"],"perCtn":null},{"id":"ff-ps-66","name":"Farm Fresh Farm Yogurt- Fig","cat":"鲜奶","codes":["9555487800854"],"ctnCodes":["9555487804852"],"perCtn":null},{"id":"ff-ps-67","name":"Farm Fresh Farm Yogurt - Durian","cat":"鲜奶","codes":["9555487800847"],"ctnCodes":["9555487804838"],"perCtn":null},{"id":"ff-ps-68","name":"Farm Yogurt 120G (6 packs x 4 tubs)","cat":"鲜奶","codes":[],"ctnCodes":["9555487804845"],"perCtn":null},{"id":"ff-ps-69","name":"Farm Fresh Farm Yogurt - Banana","cat":"鲜奶","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-ps-70","name":"Farm Fresh Farm Yogurt - Blueberries","cat":"鲜奶","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-ps-71","name":"Farm Fresh Farm Yogurt- Pineapple","cat":"鲜奶","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-ps-73","name":"Farm Fresh Greek Yogurt -Peach Aloe","cat":"鲜奶","codes":["9555487800953"],"ctnCodes":["9555487804944"],"perCtn":null},{"id":"ff-ps-74","name":"Farm Fresh Greek Yogurt -Apricot & Seed","cat":"鲜奶","codes":["9555487800946"],"ctnCodes":["9555487804937"],"perCtn":null},{"id":"ff-ps-75","name":"Farm Fresh Greek Yogurt - Strawberry Mulberry","cat":"鲜奶","codes":["9555487800977"],"ctnCodes":["9555487804968"],"perCtn":null},{"id":"ff-ps-76","name":"Farm Fresh Greek Yogurt -Blueberry Almond Grain","cat":"鲜奶","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-ps-77","name":"Farm Fresh Greek Yogurt -Natural","cat":"鲜奶","codes":["9555487800984"],"ctnCodes":["9555487804975"],"perCtn":null},{"id":"ff-ps-78","name":"Farm Fresh Greek Yogurt- Fig","cat":"鲜奶","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-ps-80","name":"Farm Fresh Greek Natural 470g","cat":"鲜奶","codes":["9555487801356"],"ctnCodes":["9555487804159"],"perCtn":null},{"id":"ff-ps-81","name":"Farm Fresh Farm Natural 470g","cat":"鲜奶","codes":["9555487801974"],"ctnCodes":["9555487805934"],"perCtn":null},{"id":"ff-ps-83","name":"Gable Top Farm Fresh Full Cream 1L WITH SPOUT","cat":"鲜奶","codes":["9555487800052"],"ctnCodes":["9555487805002"],"perCtn":null},{"id":"ff-ps-84","name":"Gable Top Farm Fresh Full Cream 1L W/O SPOUT","cat":"鲜奶","codes":["9555487800052"],"ctnCodes":["9555487805354"],"perCtn":null},{"id":"ff-ps-86","name":"Gable Top Farm Fresh Skinny 1L WITH SPOUT","cat":"鲜奶","codes":["9555487800120"],"ctnCodes":["9555487805026"],"perCtn":null},{"id":"ff-ps-87","name":"Gable Top Farm Fresh Skinny 1L W/O SPOUT","cat":"鲜奶","codes":["9555487800120"],"ctnCodes":[],"perCtn":null},{"id":"ff-ps-89","name":"Gable Top Yarra Full Cream 1L WITH SPOUT","cat":"鲜奶","codes":["9555487800205"],"ctnCodes":["9555487805248"],"perCtn":null},{"id":"ff-ps-90","name":"Gable Top Yarra Full Cream 1L WITHOUT SPOUT","cat":"鲜奶","codes":["9555487800410"],"ctnCodes":["9555487805361"],"perCtn":null},{"id":"ff-ps-91","name":"Gable Top Yarra Skinny 1L WITH SPOUT","cat":"鲜奶","codes":["9555487800212"],"ctnCodes":["9555487805255"],"perCtn":null},{"id":"ff-ps-93","name":"Gable Top Yarra Farm Master Barista 1L W/O SPOUT","cat":"鲜奶","codes":["9555487800458"],"ctnCodes":["9555487805279"],"perCtn":null},{"id":"ff-ps-95","name":"Farm Fresh Lactose Free Full Cream 1L","cat":"鲜奶","codes":["9555487800519"],"ctnCodes":["9555487804982"],"perCtn":null},{"id":"ff-ps-96","name":"Farm Fresh Lactose Free Skinny 1L","cat":"鲜奶","codes":["9555487800526"],"ctnCodes":["9555487804999"],"perCtn":null},{"id":"ff-ps-98","name":"Gable Top Yarra Farm 0% Fat","cat":"鲜奶","codes":["9555487800281"],"ctnCodes":["9555487805354"],"perCtn":null},{"id":"ff-ps-100","name":"NTUC Soya Milk with Hi Calcium (Original) with Spout","cat":"鲜奶","codes":["8888030019566"],"ctnCodes":["18888030019563"],"perCtn":null},{"id":"ff-ps-101","name":"NTUC Soya Milk with Hi Calcium (Reduced Sugar) with Spout","cat":"鲜奶","codes":["8888030019573"],"ctnCodes":["18888030019570"],"perCtn":null},{"id":"ff-ps-102","name":"NTUC Soya Milk with Hi Calcium (Unsweetened) with Spout","cat":"鲜奶","codes":["8888030065860"],"ctnCodes":["18888030065867"],"perCtn":null},{"id":"ff-ps-104","name":"NTUC Australian Fresh Milk","cat":"鲜奶","codes":["8888030061619"],"ctnCodes":["18888030061616"],"perCtn":null},{"id":"ff-ps-105","name":"NTUC Australian Chocolate Milk","cat":"鲜奶","codes":["8888033013424"],"ctnCodes":["18888033013421"],"perCtn":null},{"id":"ff-ps-106","name":"NTUC Australian Kurma Milk","cat":"鲜奶","codes":["8888033013431"],"ctnCodes":["18888033013438"],"perCtn":null},{"id":"ff-ps-108","name":"Farm Fresh Soymilk Original 1L","cat":"鲜奶","codes":["9555487800465"],"ctnCodes":["9555487804555"],"perCtn":null},{"id":"ff-ps-109","name":"Farm Fresh Soymilk Unsweetened 1L","cat":"鲜奶","codes":["9555487800472"],"ctnCodes":["9555487804562"],"perCtn":null},{"id":"ff-ps-111","name":"Kurma 700g (Sarawak)","cat":"鲜奶","codes":["9555487800618"],"ctnCodes":["9555487804760"],"perCtn":null},{"id":"ff-ps-112","name":"Chocolate 1000g (Sarawak)","cat":"鲜奶","codes":["9555487800625"],"ctnCodes":["9555487804777"],"perCtn":null},{"id":"ff-ps-113","name":"Full Cream 1000g (Sarawak)","cat":"鲜奶","codes":["9555487801929"],"ctnCodes":["9555487805880"],"perCtn":null},{"id":"ff-ps-114","name":"Banana 700g (Sarawak)","cat":"鲜奶","codes":["9555487802711"],"ctnCodes":["9555487806443"],"perCtn":null},{"id":"ff-ps-115","name":"Strawberry 700g (Sarawak)","cat":"鲜奶","codes":["9555487802728"],"ctnCodes":["9555487806450"],"perCtn":null},{"id":"ff-ps-116","name":"chocolate Mint 700g (Sarawak)","cat":"鲜奶","codes":["9555487803114"],"ctnCodes":["9555487806863"],"perCtn":null},{"id":"ff-ps-118","name":"Starbucks Banana Greek Style Yogurt with Granola 250g","cat":"鲜奶","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-ps-119","name":"Starbucks Blueberry Greek Style Yogurt with Granola 250g","cat":"鲜奶","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-ps-121","name":"Tesco Fresh Milk 1L","cat":"鲜奶","codes":["9555216575532"],"ctnCodes":["19555216575739"],"perCtn":null},{"id":"ff-ps-122","name":"Tesco Low Fat Fresh Milk 1L","cat":"鲜奶","codes":["9555216575749"],"ctnCodes":["19555216575746"],"perCtn":null},{"id":"ff-ps-124","name":"Lotus's Fresh Milk 1L","cat":"鲜奶","codes":["9555216583133"],"ctnCodes":["19555216583130"],"perCtn":null},{"id":"ff-ps-125","name":"Lotus's Low Fat Fresh Milk 1L","cat":"鲜奶","codes":["9555216583140"],"ctnCodes":["19555216583147"],"perCtn":null},{"id":"ff-ps-127","name":"Yarra Farm Natural Cooking Yogurt 470g","cat":"鲜奶","codes":["9555487800670"],"ctnCodes":["9555487804814"],"perCtn":null},{"id":"ff-ps-128","name":"Yarra Farm Natural Cooking Yogurt 1.4kg","cat":"鲜奶","codes":["9555487800830"],"ctnCodes":["9555487804821"],"perCtn":null},{"id":"ff-ps-130","name":"Farm Fresh Oat Milk Original 1000g Gable Top","cat":"鲜奶","codes":["9555487801646"],"ctnCodes":["9555487804180"],"perCtn":null},{"id":"ff-ps-132","name":"Henry Jones & Co A2 Protein Milk 1000g Gable Top","cat":"鲜奶","codes":["9555487801691"],"ctnCodes":["9555487804173"],"perCtn":null},{"id":"ff-ps-134","name":"Yarra Fresh Milk BIB 10kg","cat":"鲜奶","codes":[],"ctnCodes":["9555487805873"],"perCtn":null},{"id":"ff-ps-136","name":"Farm Fresh Banana Flavoured Milk 700g","cat":"鲜奶","codes":["9555487801936"],"ctnCodes":["9555487805897"],"perCtn":null},{"id":"ff-ps-138","name":"Farm Fresh Strawberry Milk 700g","cat":"鲜奶","codes":["9555487802704"],"ctnCodes":["9555487806436"],"perCtn":null},{"id":"ff-ps-141","name":"Farm Fresh Organic Fresh Milk 1000g Gable Top","cat":"鲜奶","codes":["9555487801981"],"ctnCodes":["9555487805941"],"perCtn":null},{"id":"ff-ps-144","name":"Vitasoy Soy Milk Gable Top with Spout 950mL","cat":"鲜奶","codes":["9555487800427"],"ctnCodes":["9555487804098"],"perCtn":null},{"id":"ff-ps-145","name":"Vitasoy Almond Milk Gable Top with Spout 950mL","cat":"鲜奶","codes":["9555487800700"],"ctnCodes":["9555487804104"],"perCtn":null},{"id":"ff-ps-146","name":"Vitasoy Oat Milk Gable Top with Spout 950mL","cat":"鲜奶","codes":["9555487800717"],"ctnCodes":["9555487804111"],"perCtn":null},{"id":"ff-ps-148","name":"Non Dairy Whipping Cream","cat":"鲜奶","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-ps-149","name":"Pasteurized Heavy Whipping Cream","cat":"鲜奶","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-ps-150","name":"Pasteurized Whipping Cream","cat":"鲜奶","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-ps-154","name":"Marigold Full Cream Milk 1L","cat":"鲜奶","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-ps-155","name":"Marigold Full Cream Milk 1L x 3","cat":"鲜奶","codes":[],"ctnCodes":[],"perCtn":3},{"id":"ff-ps-157","name":"Family Mart F1 Sticker Bar Code","cat":"鲜奶","codes":["9555487800014"],"ctnCodes":[],"perCtn":null},{"id":"ff-ps-159","name":"Starbucks Full Cream 1kg (Gable Top no Spout)","cat":"鲜奶","codes":["9555487802346"],"ctnCodes":["9555487805958"],"perCtn":null},{"id":"ff-ps-160","name":"Starbucks Low Fat 1kg (Gable Top no Spout)","cat":"鲜奶","codes":["9555487802353"],"ctnCodes":["9555487805965"],"perCtn":null},{"id":"ff-ps-162","name":"The Acre by Farm Fresh Mineral Water 500mL","cat":"鲜奶","codes":["9555487802773"],"ctnCodes":["9555487806511"],"perCtn":null},{"id":"ff-ps-164","name":"Farm Fresh Promo Pack Henry Jones 1Lx2","cat":"鲜奶","codes":["9555487802803"],"ctnCodes":["9555487806634"],"perCtn":null},{"id":"ff-ps-166","name":"Farm Fresh Fresh Milk 1L (Glass Bottle)","cat":"鲜奶","codes":["9555487802940"],"ctnCodes":[],"perCtn":null},{"id":"ff-ps-168","name":"Farm Fresh Fresh Milk Certified Humane 946mL","cat":"鲜奶","codes":["9555487802995"],"ctnCodes":["9555487806764"],"perCtn":null},{"id":"ff-ps-170","name":"Farm Fresh Chocolate Mint Flavoured Milk with Ashwaghanda 700g","cat":"鲜奶","codes":["9555487801998"],"ctnCodes":["9555487805972"],"perCtn":null},{"id":"ff-ps-172","name":"Farm Fresh 100% Australian Milk 946mL (PH)","cat":"鲜奶","codes":["9555487803060"],"ctnCodes":["9555487806832"],"perCtn":null},{"id":"ff-ps-173","name":"Farm Fresh 100% Australian Low Fat Milk 946mL (PH)","cat":"鲜奶","codes":["9555487803077"],"ctnCodes":["9555487806849"],"perCtn":null},{"id":"ff-ps-174","name":"Farm Fresh Master Barista 946mL (PH)","cat":"鲜奶","codes":["9555487803084"],"ctnCodes":["9555487806856"],"perCtn":null},{"id":"ff-ps-176","name":"Farm Fresh Riceberry Flavoured Milk 200g","cat":"鲜奶","codes":["9555487803138"],"ctnCodes":["9555487806887"],"perCtn":null},{"id":"ff-ps-177","name":"Farm Fresh Riceberry Flavoured Milk 700g","cat":"鲜奶","codes":["9555487803145"],"ctnCodes":["9555487806894"],"perCtn":null},{"id":"ff-ps-179","name":"Farm Fresh Grow Cultured Milk - Kyoho Grapes (100mL x 5)","cat":"鲜奶","codes":["9555487803596"],"ctnCodes":["9555487807327"],"perCtn":null},{"id":"ff-ps-180","name":"Farm Fresh Grow Cultured Milk - Apple (100mL x 5)","cat":"鲜奶","codes":["9555487803602"],"ctnCodes":["9555487807334"],"perCtn":null},{"id":"ff-ps-181","name":"Farm Fresh Grow Cultured Milk - Ichiba Melon (100mL x 5)","cat":"鲜奶","codes":["9555487803619"],"ctnCodes":["9555487807341"],"perCtn":null},{"id":"ff-ps-182","name":"Farm Fresh Grow Cultured Milk - Tutti Frutti (100mL x 5)","cat":"鲜奶","codes":["9555487803626"],"ctnCodes":["9555487807358"],"perCtn":null},{"id":"ff-ps-183","name":"Farm Fresh Grow Cultured Milk - Original (100mL x 5)","cat":"鲜奶","codes":["9555487803633"],"ctnCodes":["9555487807365"],"perCtn":null},{"id":"ff-ps-185","name":"Farm Fresh Full Cream Milk 1000g (No Spout)","cat":"鲜奶","codes":["9555487803800"],"ctnCodes":["9555487807600"],"perCtn":null},{"id":"ff-ps-186","name":"Farm Fresh Low Fat Milk 1000g (No Spout)","cat":"鲜奶","codes":["9555487803817"],"ctnCodes":["9555487807617"],"perCtn":null},{"id":"ff-ps-187","name":"Farm Fresh Full Cream Milk 1000g (Spout)","cat":"鲜奶","codes":["9555487803855"],"ctnCodes":["9555487807679"],"perCtn":null},{"id":"ff-ps-188","name":"Farm Fresh Low Fat Milk 1000g (Spout)","cat":"鲜奶","codes":["9555487803862"],"ctnCodes":["9555487807686"],"perCtn":null},{"id":"ff-ps-190","name":"AusFresh 100% Australian Milk 1000g (GT Spout)","cat":"鲜奶","codes":["9555487808638"],"ctnCodes":["9555487807808"],"perCtn":null},{"id":"ff-ps-191","name":"AusFresh 100% Australian Milk 2000g","cat":"鲜奶","codes":["9555487808645"],"ctnCodes":["9555487807815"],"perCtn":null},{"id":"ff-uh-2","name":"Farm Fresh Chocolate Milk 200mL Edge Helicap 24 pcs","cat":"UHT","codes":["9555487800991"],"ctnCodes":["9555487804012"],"perCtn":24},{"id":"ff-uh-3","name":"Farm Fresh Chocolate Milk 200mL Edge Helicap (4x200mL)- RSC Combo","cat":"UHT","codes":["9555487801288"],"ctnCodes":["9555487806009"],"perCtn":null},{"id":"ff-uh-4","name":"Farm Fresh Chocolate Milk 200mL Edge Helicap (6x200mL) Combo","cat":"UHT","codes":["9555487802544"],"ctnCodes":["9555487806276"],"perCtn":null},{"id":"ff-uh-5","name":"Farm Fresh Chocolate Milk 200mL Edge Helicap 12 pcs","cat":"UHT","codes":["9555487800991"],"ctnCodes":["9555487804579"],"perCtn":12},{"id":"ff-uh-6","name":"Farm Fresh Chocolate Milk 200mL Edge Helicap 12 pcs- RSC","cat":"UHT","codes":["9555487800991"],"ctnCodes":["9555487804579"],"perCtn":12},{"id":"ff-uh-7","name":"Farm Fresh Chocolate Milk 200mL Edge Helicap SARAWAK 24 pcs","cat":"UHT","codes":["9555487800649"],"ctnCodes":["9555487804791"],"perCtn":24},{"id":"ff-uh-8","name":"Farm Fresh Chocolate Milk 1L Slim Helicap","cat":"UHT","codes":["9555487801448"],"ctnCodes":["9555487804715"],"perCtn":null},{"id":"ff-uh-9","name":"Farm Fresh Chocolate Milk 1L Slim Helicap- RSC","cat":"UHT","codes":["9555487801448"],"ctnCodes":["9555487804715"],"perCtn":null},{"id":"ff-uh-10","name":"Farm Fresh Chocolate Milk 125mL 32 pcs","cat":"UHT","codes":["9555487800724"],"ctnCodes":["9555487804333"],"perCtn":32},{"id":"ff-uh-11","name":"Farm Fresh Chocolate Milk 125mL (4x 125mL) Combo","cat":"UHT","codes":["9555487801219"],"ctnCodes":["9555487806566"],"perCtn":null},{"id":"ff-uh-12","name":"Farm Fresh Chocolate Milk 110mL (4x100mL) SIG","cat":"UHT","codes":["9555487803879"],"ctnCodes":["9555487809017"],"perCtn":null},{"id":"ff-uh-14","name":"Farm Fresh Chocolate Milk (School Milk Project) Edge Straw- NS","cat":"UHT","codes":["9555487801110"],"ctnCodes":["9555487804616"],"perCtn":null},{"id":"ff-uh-15","name":"Farm Fresh Chocolate Milk (School Milk Project) Edge Straw- RSC- NS","cat":"UHT","codes":["9555487801110"],"ctnCodes":["9555487804616"],"perCtn":null},{"id":"ff-uh-16","name":"Farm Fresh Chocolate Milk (School Milk Project) Edge Straw - WS","cat":"UHT","codes":["9555487801110"],"ctnCodes":["9555487804616"],"perCtn":null},{"id":"ff-uh-17","name":"Farm Fresh Chocolate Milk (School Milk Project) Edge Straw - RSC- WS","cat":"UHT","codes":["9555487801110"],"ctnCodes":["9555487804616"],"perCtn":null},{"id":"ff-uh-19","name":"Farm Fresh Café Latte 200mL Edge Helicap 24 pcs","cat":"UHT","codes":["9555487801011"],"ctnCodes":["9555487804036"],"perCtn":24},{"id":"ff-uh-20","name":"Farm Fresh Café Latte 200mL Edge Helicap (4x200mL)- RSC Combo","cat":"UHT","codes":["9555487801295"],"ctnCodes":["9555487806016"],"perCtn":null},{"id":"ff-uh-21","name":"Farm Fresh Café Latte 200mL Edge Helicap (6x200mL)- RSC Combo","cat":"UHT","codes":["9555487802551"],"ctnCodes":["9555487806283"],"perCtn":null},{"id":"ff-uh-22","name":"Farm Fresh Café Latte 200mL Edge Helicap 12 pcs","cat":"UHT","codes":["9555487801011"],"ctnCodes":["9555487804593"],"perCtn":12},{"id":"ff-uh-23","name":"Farm Fresh Café Latte 200mL Edge Helicap 12pcs- RSC","cat":"UHT","codes":["9555487801011"],"ctnCodes":["9555487804593"],"perCtn":12},{"id":"ff-uh-25","name":"Farm Fresh Kurma 200mL Edge Helicap 24 pcs","cat":"UHT","codes":["9555487801004"],"ctnCodes":["9555487804029"],"perCtn":24},{"id":"ff-uh-26","name":"Farm Fresh Kurma 200mL Edge Helicap (4x200mL)- RSC Combo","cat":"UHT","codes":["9555487801301"],"ctnCodes":["9555487806023"],"perCtn":null},{"id":"ff-uh-27","name":"Farm Fresh Kurma 200mL Edge Helicap (6x200mL)- Combo","cat":"UHT","codes":["9555487802568"],"ctnCodes":["9555487806290"],"perCtn":null},{"id":"ff-uh-28","name":"Farm Fresh Kurma 200mL Edge Helicap 24 pcs- Ramadhan","cat":"UHT","codes":["9555487801004"],"ctnCodes":["9555487804029"],"perCtn":24},{"id":"ff-uh-29","name":"Farm Fresh Kurma 200mL Edge Helicap 12 pcs","cat":"UHT","codes":["9555487801004"],"ctnCodes":["9555487804586"],"perCtn":12},{"id":"ff-uh-30","name":"Farm Fresh Kurma 200mL Edge Helicap 12 pcs-RSC","cat":"UHT","codes":["9555487801004"],"ctnCodes":["9555487804586"],"perCtn":12},{"id":"ff-uh-31","name":"Farm Fresh Kurma 200mL Edge Helicap 24 pcs- SARAWAK","cat":"UHT","codes":["9555487800632"],"ctnCodes":["9555487804784"],"perCtn":24},{"id":"ff-uh-32","name":"Farm Fresh Kurma 1L Slim Helicap","cat":"UHT","codes":["9555487801462"],"ctnCodes":["9555487804081"],"perCtn":null},{"id":"ff-uh-33","name":"Farm Fresh Kurma 1L Slim Helicap RSC & Ramadhan","cat":"UHT","codes":["9555487801462"],"ctnCodes":["9555487804081"],"perCtn":null},{"id":"ff-uh-34","name":"Farm Fresh Kurma Milk 125mL 32 pcs","cat":"UHT","codes":["9555487800748"],"ctnCodes":["9555487804357"],"perCtn":32},{"id":"ff-uh-35","name":"Farm Fresh Kurma Milk 125mL(4x125mL) Combo","cat":"UHT","codes":["9555487801233"],"ctnCodes":["9555487806573"],"perCtn":null},{"id":"ff-uh-36","name":"Farm Fresh Kurma Milk 110mL (4x100mL)- SIG","cat":"UHT","codes":["9555487803886"],"ctnCodes":["9555487809024"],"perCtn":null},{"id":"ff-uh-38","name":"Farm Fresh Mango Tango Yogurt Drink 200mL Edge Helicap 24 pcs","cat":"UHT","codes":["9555487801028"],"ctnCodes":["9555487804043"],"perCtn":24},{"id":"ff-uh-39","name":"Farm Fresh Mango Tango Yogurt Drink 200mL Edge Helicap (4x200mL)- RSC Combo","cat":"UHT","codes":["9555487801332"],"ctnCodes":["9555487806047"],"perCtn":null},{"id":"ff-uh-40","name":"Farm Fresh Mango Tango Yogurt Drink 200mL Edge Helicap (6x200mL)-Combo","cat":"UHT","codes":["9555487802575"],"ctnCodes":["9555487806306"],"perCtn":null},{"id":"ff-uh-41","name":"Farm Fresh Mango Tango Yogurt Drink 200mL Edge Helicap 12 pcs","cat":"UHT","codes":["9555487801028"],"ctnCodes":["9555487804746"],"perCtn":12},{"id":"ff-uh-42","name":"Farm Fresh Mango Tango Yogurt Drink 200mL Edge Helicap 12 pcs-RSC","cat":"UHT","codes":["9555487801028"],"ctnCodes":["9555487804746"],"perCtn":12},{"id":"ff-uh-43","name":"Farm Fresh Mango Tango Yogurt Drink 125mL 32 pcs","cat":"UHT","codes":["9555487800779"],"ctnCodes":["9555487804388"],"perCtn":32},{"id":"ff-uh-44","name":"Farm Fresh Mango Tango Yogurt Drink 125mL (4x125mL) Combo","cat":"UHT","codes":["9555487801264"],"ctnCodes":["9555487806580"],"perCtn":null},{"id":"ff-uh-45","name":"Farm Fresh Mango Tango Yogurt Drink 100mL (4x100mL)-SIG","cat":"UHT","codes":["9555487803893"],"ctnCodes":["9555487809031"],"perCtn":null},{"id":"ff-uh-47","name":"Farm Fresh Strawberry Yogurt Drink 200mL Edge Helicap 24 pcs","cat":"UHT","codes":["9555487801059"],"ctnCodes":["9555487804050"],"perCtn":24},{"id":"ff-uh-48","name":"Farm Fresh Strawberry Yogurt Drink 200mL Edge Helicap (4x200mL)- RSC Combo","cat":"UHT","codes":["9555487801318"],"ctnCodes":["9555487806061"],"perCtn":null},{"id":"ff-uh-49","name":"Farm Fresh Strawberry Yogurt Drink 200mL Edge Helicap (6x200mL)- RSC Combo","cat":"UHT","codes":["9555487802582"],"ctnCodes":["9555487806313"],"perCtn":null},{"id":"ff-uh-50","name":"Farm Fresh Strawberry Yogurt Drink 200mL Edge Helicap 12 pcs","cat":"UHT","codes":["9555487801059"],"ctnCodes":["9555487804739"],"perCtn":12},{"id":"ff-uh-51","name":"Farm Fresh Strawberry Yogurt Drink 200mL Edge Helicap 12 pcs-RSC","cat":"UHT","codes":["9555487801059"],"ctnCodes":["9555487804739"],"perCtn":12},{"id":"ff-uh-52","name":"Farm Fresh Strawberry Yogurt Drink 125mL 32 pcs","cat":"UHT","codes":["9555487800755"],"ctnCodes":["9555487804364"],"perCtn":32},{"id":"ff-uh-53","name":"Farm Fresh Strawberry Yogurt Drink 125mL (4x125mL) combo","cat":"UHT","codes":["9555487801240"],"ctnCodes":["9555487806597"],"perCtn":null},{"id":"ff-uh-54","name":"Farm Fresh Strawberry Yogurt Drink 100mL (4x100mL)-SIG","cat":"UHT","codes":["9555487803909"],"ctnCodes":["9555487809048"],"perCtn":null},{"id":"ff-uh-56","name":"Farm Fresh Mixed Berries Yogurt Drink 200mL Edge Helicap 24 pcs","cat":"UHT","codes":["9555487801035"],"ctnCodes":["9555487804067"],"perCtn":24},{"id":"ff-uh-57","name":"Farm Fresh Mixed Berries Yogurt Drink 200mL Edge Helicap (4x 200mL)- RSC Combo","cat":"UHT","codes":["9555487801325"],"ctnCodes":["9555487806030"],"perCtn":null},{"id":"ff-uh-58","name":"Farm Fresh Mixed Berries Yogurt Drink 200mL Edge Helicap (6x 200mL)- RSC Combo","cat":"UHT","codes":["9555487802599"],"ctnCodes":["9555487806320"],"perCtn":null},{"id":"ff-uh-59","name":"Farm Fresh Mixed Berries Yogurt Drink 200mL Edge Helicap 12pcs","cat":"UHT","codes":["9555487801035"],"ctnCodes":["9555487804609"],"perCtn":12},{"id":"ff-uh-60","name":"Farm Fresh Mixed Berries Yogurt Drink 200mL Edge Helicap 12pcs- RSC","cat":"UHT","codes":["9555487801035"],"ctnCodes":["9555487804609"],"perCtn":12},{"id":"ff-uh-61","name":"Farm Fresh Mixed Berries Yogurt Drink 125mL 32pcs","cat":"UHT","codes":["9555487800762"],"ctnCodes":["9555487804371"],"perCtn":32},{"id":"ff-uh-62","name":"Farm Fresh Mixed Berries Yogurt Drink 125mL (4x125mL) combo","cat":"UHT","codes":["9555487801257"],"ctnCodes":["9555487806603"],"perCtn":null},{"id":"ff-uh-63","name":"Farm Fresh Mixed Berries Yogurt Drink 100mL (4x100mL)- SIG","cat":"UHT","codes":["9555487803916"],"ctnCodes":["9555487809055"],"perCtn":null},{"id":"ff-uh-65","name":"Farm Fresh Original Yogurt Drink 200mL Edge Helicap (3x8)","cat":"UHT","codes":["9555487801042"],"ctnCodes":["9555487804074"],"perCtn":null},{"id":"ff-uh-66","name":"Farm Fresh Original Yogurt Drink 200mL Edge Helicap (3x8)- RSC- Plain + Sticker","cat":"UHT","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-uh-67","name":"Farm Fresh Peach Yogurt Drink","cat":"UHT","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-uh-68","name":"Farm Fresh Pineapple Yogurt Drink","cat":"UHT","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-uh-69","name":"Farm Fresh Dark Berries Yogurt Drink","cat":"UHT","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-uh-70","name":"Farm Fresh Yogurt Drink Thick","cat":"UHT","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-uh-71","name":"Farm Fresh Fruit Punch Yogurt Drink 100mL (4x100mL) - SIG","cat":"UHT","codes":["9555487808867"],"ctnCodes":["9555487809338"],"perCtn":null},{"id":"ff-uh-72","name":"Farm Fresh Lychee Yogurt Drink 100mL (4x100mL) - SIG","cat":"UHT","codes":["9555487808874"],"ctnCodes":["9555487809345"],"perCtn":null},{"id":"ff-uh-73","name":"Farm Fresh Mandarin Orange Yogurt Drink 200mL x 4 shrink x 6","cat":"UHT","codes":["9555487808898"],"ctnCodes":["9555487807952"],"perCtn":6},{"id":"ff-uh-74","name":"Farm Fresh Mandarin Orange Yogurt Drink 200mL x 12","cat":"UHT","codes":["9555487808898"],"ctnCodes":["9555487807983"],"perCtn":12},{"id":"ff-uh-76","name":"Yarra Professional UHT Full Cream Milk 1 Litre (Slim Cap)- NO CAP","cat":"UHT","codes":["9555487800342"],"ctnCodes":["9555487804494"],"perCtn":null},{"id":"ff-uh-77","name":"Yarra Professional UHT Full Cream Milk 1 Litre (Slim Cap)- NO CAP- RSC","cat":"UHT","codes":["9555487800342"],"ctnCodes":["9555487804494"],"perCtn":null},{"id":"ff-uh-78","name":"Yarra Professional UHT Full Cream Milk 1 Litre (Heli Cap)","cat":"UHT","codes":["9555487800342"],"ctnCodes":["9555487804494"],"perCtn":null},{"id":"ff-uh-79","name":"Yarra Professional UHT Full Cream Milk 1 Litre (Heli Cap) -RSC","cat":"UHT","codes":["9555487800342"],"ctnCodes":["9555487804494"],"perCtn":null},{"id":"ff-uh-80","name":"Yarra UHT Low Fat Milk 1 Litre (Heli Cap)","cat":"UHT","codes":["9555487800359"],"ctnCodes":["9555487804487"],"perCtn":null},{"id":"ff-uh-82","name":"Yarra Master Barista UHT Milk 1L (Heli Cap)","cat":"UHT","codes":["9555487801479"],"ctnCodes":["9555487805507"],"perCtn":null},{"id":"ff-uh-83","name":"Yarra Master Barista UHT Milk 1L (Heli Cap) RSC","cat":"UHT","codes":["9555487801479"],"ctnCodes":["9555487805507"],"perCtn":null},{"id":"ff-uh-85","name":"Yarra Whipping Cream 200mL Edge","cat":"UHT","codes":["9555487801493"],"ctnCodes":["9555487805484"],"perCtn":null},{"id":"ff-uh-86","name":"Yarra Whipping Cream TBA 1L (SlimCap)","cat":"UHT","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-uh-87","name":"Yarra Whipping Cream TBA 1L (Helicap)","cat":"UHT","codes":["9555487801509"],"ctnCodes":["9555487805491"],"perCtn":null},{"id":"ff-uh-88","name":"Yarra Whipping Cream TBA 1L (Helicap)-RSC- Plain Ctn + Sticker","cat":"UHT","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-uh-90","name":"Lactose Free Premium Choc 200mL (TBA 200 Edge Heli Cap)","cat":"UHT","codes":["9555487801066"],"ctnCodes":["9555487804470"],"perCtn":null},{"id":"ff-uh-92","name":"Yarra Evaporated Creamer 1L (Slimcap)","cat":"UHT","codes":["9555487801486"],"ctnCodes":["9555487804463"],"perCtn":null},{"id":"ff-uh-93","name":"Yarra Evaporated Creamer 1L (Helicap)","cat":"UHT","codes":["9555487801486"],"ctnCodes":["9555487804463"],"perCtn":null},{"id":"ff-uh-94","name":"Yarra Evaporated Creamer 1L (Helicap)- RSC- Plain Ctn + Sticker","cat":"UHT","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-uh-96","name":"Australian Full Cream Milk 1L","cat":"UHT","codes":["9555487800595"],"ctnCodes":["9555487804449"],"perCtn":null},{"id":"ff-uh-97","name":"Australian Full Cream Milk 1L- RSC Plain Ctn + sticker","cat":"UHT","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-uh-98","name":"Australian Low Fat Milk 1L","cat":"UHT","codes":["9555487800601"],"ctnCodes":["9555487804456"],"perCtn":null},{"id":"ff-uh-99","name":"Australian Low Fat Milk 1L- RSC Plain Ctn + sticker","cat":"UHT","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-uh-101","name":"Farm Fresh Fresh Milk 200mL 24 pcs","cat":"UHT","codes":["9555487801127"],"ctnCodes":["9555487804623"],"perCtn":24},{"id":"ff-uh-102","name":"Farm Fresh Fresh Milk 200mL (4x200mL)- RSC Combo","cat":"UHT","codes":["9555487801349"],"ctnCodes":["9555487806054"],"perCtn":null},{"id":"ff-uh-103","name":"Farm Fresh Fresh Milk 200mL (6x200mL)- RSC Combo","cat":"UHT","codes":["9555487802605"],"ctnCodes":["9555487806337"],"perCtn":null},{"id":"ff-uh-104","name":"Farm Fresh Fresh Milk 200mL 12 pcs","cat":"UHT","codes":["9555487801127"],"ctnCodes":["9555487804753"],"perCtn":12},{"id":"ff-uh-105","name":"Farm Fresh Fresh Milk 200mL 12pcs -RSC","cat":"UHT","codes":[],"ctnCodes":[],"perCtn":12},{"id":"ff-uh-106","name":"Farm Fresh Fresh Milk 125mL 32 pcs","cat":"UHT","codes":["9555487800656"],"ctnCodes":["9555487804807"],"perCtn":32},{"id":"ff-uh-107","name":"Farm Fresh Fresh Milk 125mL (4x125mL) Combo","cat":"UHT","codes":["9555487800663"],"ctnCodes":["9555487806610"],"perCtn":null},{"id":"ff-uh-108","name":"Farm Fresh Fresh Milk 1L 12 pcs","cat":"UHT","codes":["9555487801455"],"ctnCodes":["9555487804722"],"perCtn":12},{"id":"ff-uh-109","name":"Farm Fresh Fresh Milk 1L 12pcs- RSC","cat":"UHT","codes":["9555487801455"],"ctnCodes":["9555487804722"],"perCtn":12},{"id":"ff-uh-110","name":"Farm Fresh Fresh Milk 100mL (4x100mL)","cat":"UHT","codes":["9555487803923"],"ctnCodes":["9555487809062"],"perCtn":null},{"id":"ff-uh-112","name":"Dr.V","cat":"UHT","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-uh-113","name":"Siberian Wild Cranberry Winter 250mL","cat":"UHT","codes":["0735850028224"],"ctnCodes":["0735850593425"],"perCtn":null},{"id":"ff-uh-114","name":"Siberian Wild Blueberry Snow 250mL","cat":"UHT","codes":["0735850028200"],"ctnCodes":["0735850593418"],"perCtn":null},{"id":"ff-uh-115","name":"Siberian Wild Bilberry Chill 250mL","cat":"UHT","codes":["0735850028217"],"ctnCodes":["0735850593401"],"perCtn":null},{"id":"ff-uh-117","name":"Dr.V","cat":"UHT","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-uh-118","name":"Siberian Wild Cranberry Winter 200mL","cat":"UHT","codes":["0793591469226"],"ctnCodes":["0735850593425"],"perCtn":null},{"id":"ff-uh-119","name":"Siberian Wild Blueberry Snow 200mL","cat":"UHT","codes":["0793591469249"],"ctnCodes":["0735850593418"],"perCtn":null},{"id":"ff-uh-120","name":"Siberian Wild Bilberry Chill 200mL","cat":"UHT","codes":["0793591469232"],"ctnCodes":["0735850593401"],"perCtn":null},{"id":"ff-uh-122","name":"Enrico's Full Cream Milk 1L","cat":"UHT","codes":["9556543001536"],"ctnCodes":["9556543001543"],"perCtn":null},{"id":"ff-uh-123","name":"Enrico's Full Cream Milk 1L RSC","cat":"UHT","codes":["9556543001536"],"ctnCodes":["9556543001543"],"perCtn":null},{"id":"ff-uh-125","name":"Bake With Yen (Cottura)","cat":"UHT","codes":["9555755907308"],"ctnCodes":["10119555755907305"],"perCtn":null},{"id":"ff-uh-127","name":"Rompin Beef","cat":"UHT","codes":[],"ctnCodes":[],"perCtn":null},{"id":"ff-uh-129","name":"Tesco Full Cream UHT 1L","cat":"UHT","codes":["9555216579372"],"ctnCodes":["19555216579379"],"perCtn":null},{"id":"ff-uh-130","name":"Tesco Full Cream UHT 1L RSC","cat":"UHT","codes":["9555216579372"],"ctnCodes":["19555216579379"],"perCtn":null},{"id":"ff-uh-131","name":"Tesco Chocolate Milk UHT 1L","cat":"UHT","codes":["9555216579389"],"ctnCodes":["19555216579386"],"perCtn":null},{"id":"ff-uh-132","name":"Tesco Chocolate Milk UHT 1L RSC","cat":"UHT","codes":["9555216579389"],"ctnCodes":["19555216579386"],"perCtn":null},{"id":"ff-uh-134","name":"Lotus's Full Cream UHT 1L","cat":"UHT","codes":["9555216583140"],"ctnCodes":["19555216583116"],"perCtn":null},{"id":"ff-uh-135","name":"Lotus's Chocolate Milk UHT 1L","cat":"UHT","codes":["9555216583126"],"ctnCodes":["19555216583123"],"perCtn":null},{"id":"ff-uh-137","name":"Farm Fresh Oat Milk Original 1L (UHT Slim Helicap)","cat":"UHT","codes":["9555487801592"],"ctnCodes":["9555487804227"],"perCtn":null},{"id":"ff-uh-138","name":"Farm Fresh Oat Milk Original 200mL (UHT Edge Helicap)","cat":"UHT","codes":["9555487801608"],"ctnCodes":["9555487804234"],"perCtn":null},{"id":"ff-uh-139","name":"Farm Fresh Oat Milk Original 200mL (4x200mL)","cat":"UHT","codes":["9555487801653"],"ctnCodes":["9555487804135"],"perCtn":null},{"id":"ff-uh-140","name":"Farm Fresh Oat Milk Original 200mL (6x200mL)","cat":"UHT","codes":["9555487802612"],"ctnCodes":["9555487806344"],"perCtn":null},{"id":"ff-uh-141","name":"Farm Fresh Oat Milk Original 200mL (12 x 200mL)","cat":"UHT","codes":["9555487801592"],"ctnCodes":["9555487805842"],"perCtn":null},{"id":"ff-uh-143","name":"Farm Fresh Soy Milk Original 1L (UHT Slim Helicap)","cat":"UHT","codes":["9555487801769"],"ctnCodes":["9555487804241"],"perCtn":null},{"id":"ff-uh-144","name":"Farm Fresh Soy Milk Original 200mL (UHT Edge Helicap)","cat":"UHT","codes":["9555487801363"],"ctnCodes":["9555487804258"],"perCtn":null},{"id":"ff-uh-145","name":"Farm Fresh Soy Milk Original 125mL (UHT Slim Straw)","cat":"UHT","codes":["9555487801370"],"ctnCodes":["9555487804265"],"perCtn":null},{"id":"ff-uh-146","name":"Farm Fresh Soy Milk Original 200mL (4x200mL)","cat":"UHT","codes":["9555487801660"],"ctnCodes":["9555487804142"],"perCtn":null},{"id":"ff-uh-147","name":"Farm Fresh Soy Milk Original 200mL (6x200mL)","cat":"UHT","codes":["9555487802629"],"ctnCodes":["9555487806351"],"perCtn":null},{"id":"ff-uh-148","name":"Farm Fresh Soy Milk Original 125 (4x125mL) combo","cat":"UHT","codes":["9555487802469"],"ctnCodes":["9555487806191"],"perCtn":null},{"id":"ff-uh-149","name":"Farm Fresh Soy Milk Original 100mL x 4 - SIG","cat":"UHT","codes":["9555487803930"],"ctnCodes":["9555487809079"],"perCtn":null},{"id":"ff-uh-151","name":"Farm Fresh Soy Milk Chocolate 1L (UHT Slim Helicap)","cat":"UHT","codes":["9555487801387"],"ctnCodes":["9555487804272"],"perCtn":null},{"id":"ff-uh-152","name":"Farm Fresh Soy Milk Chocolate 200mL (UHT Edge Helicap)","cat":"UHT","codes":["9555487801394"],"ctnCodes":["9555487804289"],"perCtn":null},{"id":"ff-uh-153","name":"Farm Fresh Soy Milk Chocolate 125mL (UHT Slim Straw)","cat":"UHT","codes":["9555487801400"],"ctnCodes":["9555487804296"],"perCtn":null},{"id":"ff-uh-154","name":"Farm Fresh Soy Milk Chocolate 125mL (4x125mL) Combo","cat":"UHT","codes":["9555487803190"],"ctnCodes":["9555487806962"],"perCtn":null},{"id":"ff-uh-155","name":"Farm Fresh Soy Milk Chocolate 200mL (4x200mL)","cat":"UHT","codes":["9555487801677"],"ctnCodes":["9555487805675"],"perCtn":null},{"id":"ff-uh-156","name":"Farm Fresh Soy Milk Chocolate 200mL (6x200mL)","cat":"UHT","codes":["9555487802636"],"ctnCodes":["9555487806368"],"perCtn":null},{"id":"ff-uh-157","name":"Farm Fresh Soy Milk Chocolate 100mL x 4 - SIG","cat":"UHT","codes":["9555487803947"],"ctnCodes":["9555487809086"],"perCtn":null},{"id":"ff-uh-159","name":"Farm Fresh Almond Milk Original 1L (UHT Slim Helicap)","cat":"UHT","codes":["9555487801417"],"ctnCodes":["9555487804302"],"perCtn":null},{"id":"ff-uh-160","name":"Farm Fresh Almond Milk Original 200mL (UHT Edge Helicap)","cat":"UHT","codes":["9555487801424"],"ctnCodes":["9555487804319"],"perCtn":null},{"id":"ff-uh-161","name":"Farm Fresh Almond Milk Original 200mL (4x200mL)","cat":"UHT","codes":["9555487801684"],"ctnCodes":["9555487804166"],"perCtn":null},{"id":"ff-uh-162","name":"Farm Fresh Almond Milk Original 200mL (6x200mL)","cat":"UHT","codes":["9555487802643"],"ctnCodes":["9555487806375"],"perCtn":null},{"id":"ff-uh-163","name":"Farm Fresh Almond Milk Original 200mL (12 x 200mL)","cat":"UHT","codes":["9555487801417"],"ctnCodes":["9555487805859"],"perCtn":null},{"id":"ff-uh-165","name":"Farm Fresh Café Latte Tongkat Ali 200mL (UHT Edge Helicap)","cat":"UHT","codes":["9555487801431"],"ctnCodes":["9555487804326"],"perCtn":null},{"id":"ff-uh-166","name":"Farm Fresh Café Latte Tongkat Ali 200mL (4x200mL)","cat":"UHT","codes":["9555487801707"],"ctnCodes":["9555487805613"],"perCtn":null},{"id":"ff-uh-167","name":"Farm Fresh Café Latte Tongkat Ali 200mL (6x200mL)","cat":"UHT","codes":["9555487802650"],"ctnCodes":["9555487806382"],"perCtn":null},{"id":"ff-uh-168","name":"Farm Fresh Café Latte Tongkat Ali 200mL 12 pcs","cat":"UHT","codes":["9555487801431"],"ctnCodes":["9555487805682"],"perCtn":12},{"id":"ff-uh-170","name":"Henry Jones Australian Organic A2 Protein Milk 1L (UHT Slim Helicap)","cat":"UHT","codes":["9555487801714"],"ctnCodes":["9555487805620"],"perCtn":null},{"id":"ff-uh-171","name":"Henry Jones Australian Organic A2 Protein Milk 200mL (UHT Edge Helicap)","cat":"UHT","codes":["9555487801721"],"ctnCodes":["9555487805637"],"perCtn":null},{"id":"ff-uh-172","name":"Henry Jones Australian Organic A2 Protein Milk 200mL (4x200mL)","cat":"UHT","codes":["9555487801776"],"ctnCodes":["9555487805699"],"perCtn":null},{"id":"ff-uh-173","name":"Henry Jones Australian Organic A2 Protein Milk 200mL (6x200mL)","cat":"UHT","codes":["9555487802667"],"ctnCodes":["9555487806399"],"perCtn":null},{"id":"ff-uh-174","name":"Henry Jones Australian Organic A2 Protein Milk 200mL 12 pcs","cat":"UHT","codes":["9555487801776"],"ctnCodes":["9555487806177"],"perCtn":12},{"id":"ff-uh-176","name":"Farm Fresh Almond Milk Unsweetened 1L (UHT Slim Helicap)","cat":"UHT","codes":["9555487801738"],"ctnCodes":["9555487805644"],"perCtn":null},{"id":"ff-uh-177","name":"Farm Fresh Almond Milk Unsweetened 200mL (UHT Edge Helicap)","cat":"UHT","codes":["9555487801745"],"ctnCodes":["9555487805651"],"perCtn":null},{"id":"ff-uh-178","name":"Farm Fresh Almond Milk Unsweetened 200mL (4x200mL)","cat":"UHT","codes":["9555487801783"],"ctnCodes":["9555487805705"],"perCtn":null},{"id":"ff-uh-179","name":"Farm Fresh Almond Milk Unsweetened 200mL (6x200mL)","cat":"UHT","codes":["9555487802674"],"ctnCodes":["9555487806405"],"perCtn":null},{"id":"ff-uh-180","name":"Farm Fresh Almond Milk Unsweetened 200mL (12 x 200mL)","cat":"UHT","codes":["9555487801738"],"ctnCodes":["9555487805866"],"perCtn":null},{"id":"ff-uh-182","name":"Farm Fresh Skinny 1L (UHT Slim Helicap)","cat":"UHT","codes":["9555487801752"],"ctnCodes":["9555487805668"],"perCtn":null},{"id":"ff-uh-184","name":"Able Dairies Full Cream Milk 200mL x 24 pcs (Straw)","cat":"UHT","codes":["9555513207282"],"ctnCodes":["9555513207305"],"perCtn":24},{"id":"ff-uh-185","name":"Able Dairies Full Cream Milk 1L x 12 pcs","cat":"UHT","codes":["95555132207299"],"ctnCodes":["9555513207312"],"perCtn":12},{"id":"ff-uh-187","name":"Giant Full Cream Milk 1L","cat":"UHT","codes":["9555487801615"],"ctnCodes":["9555487804197"],"perCtn":null},{"id":"ff-uh-188","name":"Giant Low Fat Milk 1L","cat":"UHT","codes":["9555487801622"],"ctnCodes":["9555487804203"],"perCtn":null},{"id":"ff-uh-189","name":"Giant Chocolate Milk 1L","cat":"UHT","codes":["9555487801639"],"ctnCodes":["9555487804210"],"perCtn":null},{"id":"ff-uh-191","name":"Mawai Mango Yogurt Drink 200mL x 24pcs Helicap","cat":"UHT","codes":["9555487801837"],"ctnCodes":["9555487805750"],"perCtn":24},{"id":"ff-uh-192","name":"Mawai Strawberry Yogurt Drink 200mL x 24pcs Helicap","cat":"UHT","codes":["9555487801844"],"ctnCodes":["9555487805767"],"perCtn":24},{"id":"ff-uh-193","name":"Mawai Mixedberries Yogurt Drink 200mL x 24pcs Helicap","cat":"UHT","codes":["9555487801851"],"ctnCodes":["9555487805774"],"perCtn":24},{"id":"ff-uh-194","name":"Mawai Natural Yogurt Drink 200mL x 24pcs Helicap","cat":"UHT","codes":["9555487801868"],"ctnCodes":["9555487805781"],"perCtn":24},{"id":"ff-uh-196","name":"Farm Fresh Lactose Free Fresh Milk 200mL x 24 pcs Helicap","cat":"UHT","codes":["9555487801875"],"ctnCodes":["9555487805798"],"perCtn":24},{"id":"ff-uh-197","name":"Farm Fresh Lactose Free Fresh Milk 200mL (4x200mL)","cat":"UHT","codes":["9555487801882"],"ctnCodes":["9555487805804"],"perCtn":null},{"id":"ff-uh-198","name":"Farm Fresh Lactose Free Fresh Milk 200mL (6x200mL)","cat":"UHT","codes":["9555487802681"],"ctnCodes":["9555487806412"],"perCtn":null},{"id":"ff-uh-199","name":"Farm Fresh Lactose Free Fresh Milk 200mL 12pcs","cat":"UHT","codes":["9555487801882"],"ctnCodes":["9555487806184"],"perCtn":12},{"id":"ff-uh-201","name":"Farm Fresh Coconut Milk 1L","cat":"UHT","codes":["9555487801899"],"ctnCodes":["9555487805811"],"perCtn":null},{"id":"ff-uh-202","name":"Farm Fresh Coconut Milk 200mL","cat":"UHT","codes":["9555487801905"],"ctnCodes":["9555487805828"],"perCtn":null},{"id":"ff-uh-203","name":"Farm Fresh Coconut Milk 200mL (6x4 packs) Combo","cat":"UHT","codes":["9555487801912"],"ctnCodes":["9555487805835"],"perCtn":null},{"id":"ff-uh-205","name":"Farm Fresh Banana Flavoured Milk 200mL","cat":"UHT","codes":["9555487801943"],"ctnCodes":["9555487805903"],"perCtn":null},{"id":"ff-uh-206","name":"Farm Fresh Banana Flavoured Milk 200mL (4x200mL)","cat":"UHT","codes":["9555487801967"],"ctnCodes":["9555487805927"],"perCtn":null},{"id":"ff-uh-207","name":"Farm Fresh Banana Flavoured Milk 200mL (6x200mL)","cat":"UHT","codes":["9555487802698"],"ctnCodes":["9555487806429"],"perCtn":null},{"id":"ff-uh-208","name":"Farm Fresh Banana Flavoured Milk 1L","cat":"UHT","codes":["9555487801950"],"ctnCodes":["9555487805910"],"perCtn":null},{"id":"ff-uh-209","name":"Farm Fresh Banana Flavoured Milk 125mL","cat":"UHT","codes":["9555487802476"],"ctnCodes":["9555487806207"],"perCtn":null},{"id":"ff-uh-210","name":"Farm Fresh Banana Flavoured Milk 125mL (8x4) combo","cat":"UHT","codes":["9555487802483"],"ctnCodes":["9555487806214"],"perCtn":null},{"id":"ff-uh-211","name":"Farm Fresh Banana Flavoured Milk 100mL x 4- SIG","cat":"UHT","codes":["9555487808515"],"ctnCodes":["9555487809154"],"perCtn":null},{"id":"ff-uh-213","name":"Farm Fresh Almond Barista 1L (UHT Slim Helicap)","cat":"UHT","codes":["9555487802360"],"ctnCodes":["9555487806078"],"perCtn":null},{"id":"ff-uh-214","name":"Farm Fresh Almond Barista 200mL (UHT Edge Helicap)","cat":"UHT","codes":["9555487802377"],"ctnCodes":["9555487806085"],"perCtn":null},{"id":"ff-uh-216","name":"Farm Fresh Oat Barista 1L (UHT Slim Helicap)","cat":"UHT","codes":["9555487802384"],"ctnCodes":["9555487806092"],"perCtn":null},{"id":"ff-uh-217","name":"Farm Fresh Oat Barista 200mL (UHT Edge Helicap)","cat":"UHT","codes":["9555487802391"],"ctnCodes":["9555487806108"],"perCtn":null},{"id":"ff-uh-219","name":"Yarra by Farm Fresh Chocolate Milk UHT 200mL","cat":"UHT","codes":["9555487802407"],"ctnCodes":["9555487806115"],"perCtn":null},{"id":"ff-uh-220","name":"Yarra by Farm Fresh Chocolate Milk UHT 1L","cat":"UHT","codes":["9555487802414"],"ctnCodes":["9555487806122"],"perCtn":null},{"id":"ff-uh-221","name":"Yarra by Farm Fresh Chocolate Milk UHT 200mL (4x200mL) combo","cat":"UHT","codes":["9555487802490"],"ctnCodes":["9555487806221"],"perCtn":null},{"id":"ff-uh-222","name":"Yarra by Farm Fresh Chocolate Milk UHT 125mL","cat":"UHT","codes":["9555487802841"],"ctnCodes":["9555487806641"],"perCtn":null},{"id":"ff-uh-223","name":"Yarra by Farm Fresh Chocolate Milk UHT 125mL (4x125mL) combo","cat":"UHT","codes":["9555487802858"],"ctnCodes":["9555487806658"],"perCtn":null},{"id":"ff-uh-224","name":"Yarra by Farm Fresh Chocolate Milk UHT 100mL x 4- SIG","cat":"UHT","codes":["9555487803954"],"ctnCodes":["9555487809093"],"perCtn":null},{"id":"ff-uh-226","name":"Yarra by Farm Fresh Full Cream Milk UHT 200mL","cat":"UHT","codes":["9555487802421"],"ctnCodes":["9555487806139"],"perCtn":null},{"id":"ff-uh-227","name":"Yarra by Farm Fresh Full Cream Milk UHT 1L","cat":"UHT","codes":["9555487802438"],"ctnCodes":["9555487806146"],"perCtn":null},{"id":"ff-uh-228","name":"Yarra by Farm Fresh Full Cream Milk UHT 200mL (4x200ML) combo","cat":"UHT","codes":["9555487802506"],"ctnCodes":["9555487806238"],"perCtn":null},{"id":"ff-uh-229","name":"Yarra by Farm Fresh Full Cream Milk UHT 125mL","cat":"UHT","codes":["9555487802865"],"ctnCodes":["9555487806665"],"perCtn":null},{"id":"ff-uh-230","name":"Yarra by Farm Fresh Full Cream Milk UHT 125mL (4x125ML) combo","cat":"UHT","codes":["9555487802872"],"ctnCodes":["9555487806672"],"perCtn":null},{"id":"ff-uh-231","name":"Yarra by Farm Fresh Full Cream Milk UHT 100mL x 4- SIG","cat":"UHT","codes":["9555487803961"],"ctnCodes":["9555487809109"],"perCtn":null},{"id":"ff-uh-233","name":"Yarra by Farm Fresh Strawberry Milk UHT 200mL","cat":"UHT","codes":["9555487802445"],"ctnCodes":["9555487806153"],"perCtn":null},{"id":"ff-uh-234","name":"Yarra by Farm Fresh Strawberry Milk UHT 1L","cat":"UHT","codes":["9555487802452"],"ctnCodes":["9555487806160"],"perCtn":null},{"id":"ff-uh-235","name":"Yarra by Farm Fresh Strawberry Milk UHT 200mL (4x200mL) combo","cat":"UHT","codes":["9555487802513"],"ctnCodes":["9555487806245"],"perCtn":null},{"id":"ff-uh-236","name":"Yarra by Farm Fresh Strawberry Milk UHT 125mL","cat":"UHT","codes":["9555487802889"],"ctnCodes":["9555487806689"],"perCtn":null},{"id":"ff-uh-237","name":"Yarra by Farm Fresh Strawberry Milk UHT 125mL (4x125mL) combo","cat":"UHT","codes":["9555487802896"],"ctnCodes":["9555487806696"],"perCtn":null},{"id":"ff-uh-238","name":"Yarra by Farm Fresh Strawberry Milk UHT 100mL x 4- SIG","cat":"UHT","codes":["9555487803978"],"ctnCodes":["9555487809116"],"perCtn":null},{"id":"ff-uh-240","name":"Farm Fresh Kids Formulated Milk 200mL","cat":"UHT","codes":["9555487802520"],"ctnCodes":["9555487806252"],"perCtn":null},{"id":"ff-uh-241","name":"Farm Fresh Kids Formulated Milk 200mL (4x200mL)Combo","cat":"UHT","codes":["9555487802537"],"ctnCodes":["9555487806269"],"perCtn":null},{"id":"ff-uh-242","name":"Farm Fresh Kids Formulated Milk 125mL","cat":"UHT","codes":["9555487802742"],"ctnCodes":["9555487806474"],"perCtn":null},{"id":"ff-uh-243","name":"Farm Fresh Kids Formulated Milk 125mL (4x125mL)Combo","cat":"UHT","codes":["9555487802759"],"ctnCodes":["9555487806481"],"perCtn":null},{"id":"ff-uh-244","name":"Farm Fresh Kids Formulated Milk 100mL x 4 - SIG","cat":"UHT","codes":["9555487803985"],"ctnCodes":["9555487809123"],"perCtn":null},{"id":"ff-uh-246","name":"Farm Fresh Dairy Whipping Cream 1L UHT","cat":"UHT","codes":["9555487802797"],"ctnCodes":["9555487806535"],"perCtn":null},{"id":"ff-uh-247","name":"Farm Fresh Dairy Whipping Cream 200mL UHT","cat":"UHT","codes":["9555487808690"],"ctnCodes":["9555487807853"],"perCtn":null},{"id":"ff-uh-249","name":"Meow Milk Lactose Free Milk for Cat 200mL HC","cat":"UHT","codes":["9555487802902"],"ctnCodes":["9555487806702"],"perCtn":null},{"id":"ff-uh-250","name":"Meow Milk Lactose Free Milk for Cat 125mL NO Hole","cat":"UHT","codes":["9555487803428"],"ctnCodes":["9555487807198"],"perCtn":null},{"id":"ff-uh-251","name":"Woof Milk Lactose Free Milk for Dog 200mL HC","cat":"UHT","codes":["9555487802926"],"ctnCodes":["9555487806726"],"perCtn":null},{"id":"ff-uh-252","name":"Woof Milk Lactose Free Milk for Dog 125mL NO Hole","cat":"UHT","codes":["9555487803435"],"ctnCodes":["9555487807204"],"perCtn":null},{"id":"ff-uh-253","name":"Woof Milk Lactose Free Milk for Dog 1L HC","cat":"UHT","codes":["9555487803442"],"ctnCodes":["9555487807211"],"perCtn":null},{"id":"ff-uh-255","name":"Farm Fresh Creamy Flavoured Milk UHT 1L (Export Thailand)","cat":"UHT","codes":["9555487802834"],"ctnCodes":["9555487806627"],"perCtn":null},{"id":"ff-uh-257","name":"Omey Adult Premium Cat Food (1kg x 16 packs)","cat":"UHT","codes":["9555487802957"],"ctnCodes":[],"perCtn":null},{"id":"ff-uh-258","name":"Omey Mother & Kitten Premium Cat Food (1kg x 16 packs)","cat":"UHT","codes":["9555487802964"],"ctnCodes":[],"perCtn":null},{"id":"ff-uh-260","name":"Tealive Full Cream Milk UHT 1L","cat":"UHT","codes":["9555487802827"],"ctnCodes":["9555487806559"],"perCtn":null},{"id":"ff-uh-262","name":"Saint David Dairy Oat Milk 1L","cat":"UHT","codes":["9555487802971"],"ctnCodes":["9555487806740"],"perCtn":null},{"id":"ff-uh-263","name":"Saint David Dairy Almond Milk 1L","cat":"UHT","codes":["9555487802988"],"ctnCodes":["9555487806757"],"perCtn":null},{"id":"ff-uh-265","name":"Farm Fresh Cooking Cream 1L UHT","cat":"UHT","codes":["9555487803121"],"ctnCodes":["9555487806870"],"perCtn":null},{"id":"ff-uh-266","name":"Farm Fresh Cooking Cream 200mL UHT","cat":"UHT","codes":["9555487808683"],"ctnCodes":["9555487807846"],"perCtn":null},{"id":"ff-uh-268","name":"Farm Fresh Chocolate Malt 100mL","cat":"UHT","codes":["9555487803473"],"ctnCodes":["9555487807242"],"perCtn":null},{"id":"ff-uh-269","name":"Farm Fresh Chocolate Malt 100mL (100mL x 4 Shrink)","cat":"UHT","codes":["9555487803480"],"ctnCodes":["9555487807259"],"perCtn":null},{"id":"ff-uh-270","name":"Farm Fresh Chocolate Malt KAW 180mL Straw","cat":"UHT","codes":["9555487803497"],"ctnCodes":["9555487807266"],"perCtn":null},{"id":"ff-uh-271","name":"Farm Fresh Chocolate Malt KAW 180mL (200mL x 4 Shrink)","cat":"UHT","codes":["9555487803503"],"ctnCodes":["9555487807273"],"perCtn":null},{"id":"ff-uh-272","name":"Farm Fresh Chocolate Malt KAW 115mL","cat":"UHT","codes":["9555487808614"],"ctnCodes":["9555487807785"],"perCtn":null},{"id":"ff-uh-273","name":"Farm Fresh Chocolate Malt KAW 115mL (115mL x 4 Shrink)","cat":"UHT","codes":["9555487808621"],"ctnCodes":["9555487807792"],"perCtn":null},{"id":"ff-uh-276","name":"Farm Fresh Fortified Filled Milk 1L (PH)","cat":"UHT","codes":["9555487803718"],"ctnCodes":["9555487807408"],"perCtn":null},{"id":"ff-uh-278","name":"YBFF Ichiba Melon Flavoured Milk 125mL","cat":"UHT","codes":["9555487803770"],"ctnCodes":["9555487807556"],"perCtn":null},{"id":"ff-uh-279","name":"YBFF Ichiba Melon Flavoured Milk 125mL x4","cat":"UHT","codes":["9555487803770"],"ctnCodes":["9555487807921"],"perCtn":4},{"id":"ff-uh-280","name":"YBFF Pop Corn Flavoured Milk 125mL","cat":"UHT","codes":["9555487803787"],"ctnCodes":["9555487807563"],"perCtn":null},{"id":"ff-uh-281","name":"YBFF Pop Corn Flavoured Milk 125mL x 4","cat":"UHT","codes":["9555487803787"],"ctnCodes":["9555487807938"],"perCtn":4},{"id":"ff-uh-282","name":"YBFF Chocolated Salted Caramel Flavoured Milk 125mL","cat":"UHT","codes":["9555487803794"],"ctnCodes":["9555487807570"],"perCtn":null},{"id":"ff-uh-283","name":"YBFF Chocolated Salted Caramel Flavoured Milk 125mL x 4","cat":"UHT","codes":["9555487803794"],"ctnCodes":["9555487807945"],"perCtn":4},{"id":"ff-uh-285","name":"Farm Fresh Full Cream Milk 1L HC","cat":"UHT","codes":["9555487803824"],"ctnCodes":["9555487807624"],"perCtn":null},{"id":"ff-uh-286","name":"Farm Fresh Full Cream Milk 100mL x 4 SIG","cat":"UHT","codes":["9555487808881"],"ctnCodes":["9555487809413"],"perCtn":null},{"id":"ff-uh-287","name":"Farm Fresh Low Fat Milk 1L HC","cat":"UHT","codes":["9555487803831"],"ctnCodes":["9555487807631"],"perCtn":null},{"id":"ff-uh-289","name":"Farm Fresh Fortified Milk 1L (MY)","cat":"UHT","codes":["9555487803848"],"ctnCodes":["9555487807662"],"perCtn":null},{"id":"ff-uh-291","name":"Eco Milk Full Cream Milk 1L UHT","cat":"UHT","codes":["9555487808546"],"ctnCodes":["9555487807723"],"perCtn":null},{"id":"ff-uh-293","name":"7E Fortified Full Cream Milk UHT 200mL","cat":"UHT","codes":["9555487808652"],"ctnCodes":["9555487807822"],"perCtn":null},{"id":"ff-uh-294","name":"7E Fortified Chocolate Milk UHT 200mL","cat":"UHT","codes":["9555487808669"],"ctnCodes":["9555487807839"],"perCtn":null},{"id":"ff-uh-296","name":"FF Fortified Milk (PH) Twin Pack promo sticker (UHT)","cat":"UHT","codes":["9555487808676"],"ctnCodes":[],"perCtn":null},{"id":"ff-uh-298","name":"YBFF Full Cream Milk 1L UHT (Value Pack) 2 x 1L","cat":"UHT","codes":["9555487802223"],"ctnCodes":[],"perCtn":null},{"id":"ff-uh-300","name":"Henry Jones Barista Milk 1L UHT","cat":"UHT","codes":["9555487808713"],"ctnCodes":["9555487807860"],"perCtn":null},{"id":"ff-uh-302","name":"Farm Fresh Whip & Cook Whipping Cream 1L UHT","cat":"UHT","codes":["9555487808720"],"ctnCodes":["9555487807877"],"perCtn":null},{"id":"ff-uh-304","name":"Farm Fresh Full Cream Milk 1L x 3 Combo (Plastic)","cat":"UHT","codes":["9555487808843"],"ctnCodes":["9555487809314"],"perCtn":null},{"id":"ff-uh-306","name":"Farm Fresh Taro Ube Flavoured Milk 200mL x 4 Shrink x6","cat":"UHT","codes":["9555487808904"],"ctnCodes":["9555487807969"],"perCtn":6},{"id":"ff-uh-307","name":"Farm Fresh Gula Melaka Flavoured Milk 200mL x 4 shrink x 6","cat":"UHT","codes":["9555487808911"],"ctnCodes":["9555487807976"],"perCtn":6},{"id":"ff-pw-2","name":"Farm Fresh Grow Formulated Milk Powder for Children 800g (1-3)","cat":"奶粉","codes":["9555487803008"],"ctnCodes":["9555487806771"],"perCtn":null},{"id":"ff-pw-3","name":"Farm Fresh Grow Formulated Milk Powder for Children 500g (1-3)","cat":"奶粉","codes":["9555487802971"],"ctnCodes":["9555487806788"],"perCtn":null},{"id":"ff-pw-4","name":"Farm Fresh Grow Formulated Milk Powder for Children 30g (1-3)","cat":"奶粉","codes":["9555487802988"],"ctnCodes":["9555487806795"],"perCtn":null},{"id":"ff-pw-6","name":"Farm Fresh Grow Formulated Milk Powder for Children 800g (4-6)","cat":"奶粉","codes":["9555487803039"],"ctnCodes":["9555487806801"],"perCtn":null},{"id":"ff-pw-7","name":"Farm Fresh Grow Formulated Milk Powder for Children 500g (4-6)","cat":"奶粉","codes":["9555487803046"],"ctnCodes":["9555487806818"],"perCtn":null},{"id":"ff-pw-8","name":"Farm Fresh Grow Formulated Milk Powder for Children 30g (4-6)","cat":"奶粉","codes":["9555487803053"],"ctnCodes":["9555487806825"],"perCtn":null},{"id":"ff-pw-10","name":"Farm Fresh Full Cream Milk Family Pack 800g x 12","cat":"奶粉","codes":["9555487803206"],"ctnCodes":["9555487806979"],"perCtn":12},{"id":"ff-pw-11","name":"Farm Fresh Full Cream Milk Family Pack 800g x 6","cat":"奶粉","codes":[],"ctnCodes":["9555487807303"],"perCtn":6},{"id":"ff-pw-13","name":"Farm Fresh Choco Malt 800g x12 (Powder)","cat":"奶粉","codes":["9555487803213"],"ctnCodes":["9555487806986"],"perCtn":12},{"id":"ff-pw-14","name":"Farm Fresh Choco Malt 800g x6 (Powder)","cat":"奶粉","codes":[],"ctnCodes":["9555487807310"],"perCtn":6},{"id":"ff-pw-15","name":"Farm Fresh Choco Malt 35g x 10 sachets(Powder) 12 pouches","cat":"奶粉","codes":["9555487803534"],"ctnCodes":["9555487807297"],"perCtn":null},{"id":"ff-pw-16","name":"Farm Fresh Choco Malt 2kg x 6 (Kekal Aktif)","cat":"奶粉","codes":["9555487803732"],"ctnCodes":["9555487807518"],"perCtn":6},{"id":"ff-pw-17","name":"Farm Fresh Choco Malt 72 x (2s x 35g)","cat":"奶粉","codes":[],"ctnCodes":["9555487807693"],"perCtn":null},{"id":"ff-pw-19","name":"Farm Fresh Choco Malt 1kg x12 (Powder) -Kaw","cat":"奶粉","codes":["9555487803664"],"ctnCodes":["9555487807396"],"perCtn":null},{"id":"ff-pw-20","name":"Farm Fresh Choco Malt 1kg x6 (Powder) - Kaw","cat":"奶粉","codes":[],"ctnCodes":["9555487807402"],"perCtn":null},{"id":"ff-pw-21","name":"Farm Fresh Choco Malt 35g x 10 sachets(Powder) 12 pouches- Kaw","cat":"奶粉","codes":["9555487803688"],"ctnCodes":["9555487807419"],"perCtn":null},{"id":"ff-pw-22","name":"Farm Fresh Choco Malt 72 x (2s x 35g) - Kaw","cat":"奶粉","codes":[],"ctnCodes":["9555487807914"],"perCtn":null},{"id":"ff-pw-24","name":"Farm Fresh Skim Milk Powder 10g x 50 sachets x 10 Bags","cat":"奶粉","codes":["9555487808775"],"ctnCodes":["9555487807907"],"perCtn":null},{"id":"ff-mi-2","name":"FFG Milk Powder 1-3 30g (Sanpling Envelope)","cat":"其他","codes":["9555487803510"],"ctnCodes":["9555487807280"],"perCtn":null},{"id":"ff-mi-3","name":"Raya Packet","cat":"其他","codes":["9555487807648"],"ctnCodes":["9555487807655"],"perCtn":null},{"id":"ff-mi-4","name":"Farm Fresh Ice Cream Potong (Durian) Sin Wah 65mL","cat":"其他","codes":["9555487808706"],"ctnCodes":[],"perCtn":null}];
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+const SB_URL='https://tpynrnihqoruajddwcnw.supabase.co';
+const SB_KEY='sb_publishable_tc0p1gP3D1GXvD8WqR9K1w_2iSX43Zf'; // 公开的 publishable key，安全设定靠数据库 RLS
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const iso=d=>{const x=new Date(d);return new Date(x-x.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
+const id=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-3);
+const key=n=>n.trim().toLowerCase();
+const ST={get(k){try{return localStorage.getItem(k)}catch{return null}},set(k,v){try{localStorage.setItem(k,v)}catch{}}};
+const TYPES={wa:'WhatsApp 客人',sm:'99 Speedmart',gi:'Giant',my:'Mydin',cafe:'Coffee shop',cake:'蛋糕店'};
+const ROLES={admin:'管理员',manager:'负责人',driver:'司机'};
+const DEF_MIN={wa:1,sm:2,gi:2,my:2,cafe:1,cake:1};
+const DEF_PRODUCTS=[
+ ['Farm Fresh Fresh Milk 1L','鲜奶'],['Farm Fresh Fresh Milk 2L','鲜奶'],['Farm Fresh Fresh Milk 200ml','鲜奶'],
+ ['Farm Fresh Chocolate Milk 200ml','鲜奶'],['Farm Fresh UHT Milk 1L','UHT'],['Farm Fresh UHT Milk 200ml','UHT'],
+ ['Farm Fresh Yogurt','酸奶'],['Farm Fresh Ice Cream','冰淇淋']];
+
+let sb=null;
+let S={users:[],products:[],stops:[],loads:{},minDays:{...DEF_MIN},batches:[],moves:[],stockMode:false};
+let me=null;
+let ui={recv:null,dmg:null,count:false,openP:null,screen:'boot',tab:'plan',date:iso(new Date()),driver:'',edit:null,open:null,msg:'',ok:'',f:{},needsSetup:false,reset:null,note:''};
+
+/* ---------- 登入名转换: 电话 -> 内部 email ---------- */
+function toEmail(v){
+  v=(v||'').trim().toLowerCase();
+  if(v.includes('@'))return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)?v:null;
+  let d=v.replace(/\D/g,'');if(d.startsWith('0'))d='6'+d;
+  if(d.length<9||d.length>13)return null;
+  return d+'@phone.infi-driver.app';
+}
+const isPhone=v=>!(v||'').includes('@');
+const uname=i=>S.users.find(u=>u.id===i)?.name||'未分配';
+const drivers=()=>S.users.filter(u=>u.role==='driver'&&u.active);
+const isMgr=()=>me&&me.role!=='driver';
+const FULL=/[?&]full=1/.test(location.search);
+const TABS=FULL?{
+  admin:[['plan','📋 排单'],['stock','📦 仓库'],['driver','🚚 司机'],['users','👥 用户'],['set','⚙️ 设置']],
+  manager:[['plan','📋 排单'],['stock','📦 仓库'],['driver','🚚 司机'],['set','⚙️ 设置']],
+  driver:[['driver','🚚 我的路线']]}:{
+  admin:[['stock','📦 进货 / 点货']],manager:[['stock','📦 进货 / 点货']],driver:[['driver','🚚 我的路线']]};
+
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.remove('hide');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.add('hide'),5000)}
+
+/* ---------- 数据 <-> 云端 ---------- */
+const hasData=L=>L.confirmed||Object.values(L.batch||{}).some(b=>b.exp||b.loaded||b.scanned);
+const COLS={
+ products:{table:'products',pk:'id',rows:()=>S.products.map(p=>({id:p.id,data:p}))},
+ stops:{table:'stops',pk:'id',rows:()=>S.stops.map(s=>{const{id,date,driver,...rest}=s;return{id,date,driver_id:driver||null,data:rest}})},
+ loads:{table:'loads',pk:'key',rows:()=>Object.entries(S.loads).filter(([k,L])=>hasData(L)||snap.loads?.has(k)).map(([k,L])=>{const[date,driver_id]=k.split('|');return{key:k,date,driver_id,data:L}})},
+ settings:{table:'settings',pk:'key',rows:()=>isMgr()?[{key:'minDays',data:S.minDays},{key:'stockMode',data:{on:!!S.stockMode}}]:[]}
+};
+let snap={};
+function resetSnap(){snap={};for(const[n,c]of Object.entries(COLS)){snap[n]=new Map(c.rows().map(r=>[r[c.pk],JSON.stringify(r)]))}}
+async function loadAll(){
+  const from=iso(Date.now()-30*864e5);
+  const [pr,pd,st,ld,se]=await Promise.all([
+    sb.from('profiles').select('*').order('created_at'),
+    sb.from('products').select('*'),
+    sb.from('stops').select('*').gte('date',from),
+    sb.from('loads').select('*').gte('date',from),
+    sb.from('settings').select('*')]);
+  const bad=[pr,pd,st,ld,se].find(r=>r.error);
+  if(bad)throw new Error(bad.error.message);
+  S.users=pr.data;
+  S.products=pd.data.map(r=>r.data);
+  S.stops=st.data.map(r=>({...r.data,id:r.id,date:r.date,driver:r.driver_id||''}));
+  S.loads={};ld.data.forEach(r=>S.loads[r.key]=r.data);
+  S.minDays={...DEF_MIN,...(se.data.find(r=>r.key==='minDays')?.data||{})};
+  S.stockMode=!!se.data.find(r=>r.key==='stockMode')?.data?.on;
+  await loadStock();
+  resetSnap();
+  if(isMgr()&&typeof CATALOG!=='undefined'&&!S.products.some(p=>p.id.startsWith('ff-'))){
+    S.products=S.products.filter(p=>!/^p[1-8]$/.test(p.id)).concat(CATALOG.map(c=>({...c,minDays:null})));
+    sync();
+  }
+}
+async function loadStock(){
+  const[bt,sk,mv]=await Promise.all([
+    sb.from('batches').select('*').eq('closed',false),
+    sb.rpc('stock_by_batch'),
+    isMgr()?sb.from('stock_moves').select('*').order('created_at',{ascending:false}).limit(120):Promise.resolve({data:[]})]);
+  const bad=[bt,sk,mv].find(r=>r.error);if(bad)throw new Error(bad.error.message);
+  const sm={};sk.data.forEach(r=>sm[r.batch_id]=r.qty);
+  S.batches=bt.data.map(b=>({...b,qty:sm[b.id]||0}));S.moves=mv.data;
+  if(isMgr()){ // 库存清零超过一天的批次自动收起
+    const dead=S.batches.filter(b=>b.qty<=0&&Date.now()-new Date(b.created_at)>864e5);
+    if(dead.length){await sb.from('batches').update({closed:true}).in('id',dead.map(b=>b.id));S.batches=S.batches.filter(b=>!dead.includes(b))}
+  }
+}
+let chain=Promise.resolve();
+const sync=()=>chain=chain.then(syncOnce).catch(e=>toast('保存失败: '+e.message));
+async function syncOnce(){
+  if(!sb||!me)return;
+  for(const[n,c]of Object.entries(COLS)){
+    const cur=new Map(c.rows().map(r=>[r[c.pk],r]));
+    const sn=snap[n];
+    const ins=[];
+    for(const[k,r]of cur){
+      const str=JSON.stringify(r);
+      if(sn.get(k)===str)continue;
+      const row={...r,updated_at:new Date().toISOString()};if(n==='settings')delete row.updated_at;
+      if(n!=='settings'&&!sn.has(k)){ins.push([k,str,row]);continue}
+      const q=n==='settings'?sb.from(c.table).upsert(row):sb.from(c.table).update(row).eq(c.pk,k);
+      const{error}=await q;if(error)throw error;
+      sn.set(k,str);
+    }
+    for(let i=0;i<ins.length;i+=200){
+      const part=ins.slice(i,i+200);
+      const{error}=await sb.from(c.table).insert(part.map(x=>x[2]));if(error)throw error;
+      part.forEach(x=>sn.set(x[0],x[1]));
+    }
+    for(const k of[...sn.keys()]){
+      if(cur.has(k))continue;
+      const{error}=await sb.from(c.table).delete().eq(c.pk,k);if(error)throw error;
+      sn.delete(k);
+    }
+  }
+}
+const save=()=>sync();
+
+/* ---------- 业务 ---------- */
+const norm=x=>String(x).toLowerCase().replace(/farm fresh/g,'').replace(/\s+/g,' ').trim();
+const findProduct=n=>S.products.find(p=>norm(p.name)===norm(n));
+const prodById=i=>S.products.find(p=>p.id===i);
+const pidOf=i=>(i.pid&&prodById(i.pid)?i.pid:findProduct(i.name)?.id)||'';
+const ik=i=>pidOf(i)||key(i.name);
+const parseItems=t=>t.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{
+  const m=l.match(/^(.+?)\s+(\d+(?:\.\d+)?)\s*(\S*)$/);
+  const it=m?{name:m[1].trim(),qty:+m[2],unit:m[3]||''}:{name:l,qty:1,unit:''};
+  it.pid=findProduct(it.name)?.id||'';return it});
+const itemsText=a=>a.map(i=>`${i.name} ${i.qty} ${i.unit}`.trim()).join('\n');
+function buildAgg(stops){
+  const agg={};
+  stops.forEach(s=>s.items.forEach(i=>{const k=ik(i);(agg[k]??={name:prodById(pidOf(i))?.name||i.name,unit:i.unit,qty:0,stops:[],pid:pidOf(i)});agg[k].qty+=toPcs(i);agg[k].stops.push(s)}));
+  return agg}
+const daysLeft=(exp,on)=>Math.round((new Date(exp)-new Date(on))/864e5);
+const dayStops=(d,drv)=>S.stops.filter(s=>s.date===d&&(!drv||s.driver===drv)).sort((a,b)=>a.seq-b.seq);
+const loadKey=(d,drv)=>d+'|'+drv;
+/* 库存统一用「件」记账；箱 = 每箱几件 */
+const perCtn=pid=>prodById(pid)?.perCtn||1;
+const isCtnUnit=u=>!u||/^(ctn|ctns|carton|cartons|box|boxes|箱)$/i.test(String(u).trim());
+const toPcs=i=>i.qty*(isCtnUnit(i.unit)?perCtn(pidOf(i)):1);
+const fmtQty=(pid,pcs)=>{const c=perCtn(pid);if(c<=1)return pcs+' 件';const k=Math.floor(pcs/c),r=pcs-k*c;return(k?k+' ctn':'')+(k&&r?' + ':'')+(r||!k?r+' 件':'')};
+const dig=x=>String(x||'').replace(/\D/g,'');
+const codeEq=(sc,st)=>{sc=dig(sc);st=dig(st);if(!sc||!st)return false;if(sc===st)return true;
+  if(sc.length===14&&st.length===13)return sc.slice(1,13)===st.slice(0,12);
+  if(sc.length===13&&st.length===14)return st.slice(1,13)===sc.slice(0,12);return false};
+const hasCode=(list,c)=>(list||[]).some(x=>codeEq(c,x));
+const newLine=()=>({pid:'',ctn:'',pcs:'',exp:''});
+const itemExp=(L,s,j,x)=>{const al=(L.alloc||[]).filter(a=>a.stop===s.id&&a.item===j);return al.length?al.map(a=>a.exp).sort()[0]:L.batch[ik(x)]?.exp};
+// 先到期先出 (FEFO)，并满足每位客人要求的最少剩余天数
+function allocate(stops){
+  const rem={};S.batches.forEach(b=>rem[b.id]=b.qty);
+  const out=[],short=[];
+  stops.forEach(s=>s.items.forEach((it,j)=>{
+    const pid=pidOf(it);if(!pid)return;
+    let need=toPcs(it);
+    const min=prodById(pid)?.minDays??S.minDays[s.type]??1;
+    const el=S.batches.filter(b=>b.product_id===pid&&!b.closed&&daysLeft(b.expiry,s.date)>=min).sort((a,b)=>a.expiry<b.expiry?-1:1);
+    for(const b of el){if(need<=0)break;const t=Math.min(need,rem[b.id]);if(t<=0)continue;out.push({stop:s.id,item:j,batch:b.id,pid,pcs:t,exp:b.expiry});rem[b.id]-=t;need-=t}
+    if(need>0)short.push({stop:s.id,item:j,pid,pcs:need,name:it.name,customer:s.customer,min});
+  }));
+  return{out,short};
+}
+function syncRecv(){const r=ui.recv;if(!r)return;r.po=$('#rv_po')?.value??r.po;r.date=$('#rv_date')?.value??r.date;
+  r.lines.forEach((l,i)=>{l.pid=$('#rl_pid_'+i)?.value??l.pid;l.ctn=$('#rl_ctn_'+i)?.value??l.ctn;l.pcs=$('#rl_pcs_'+i)?.value??l.pcs;l.exp=$('#rl_exp_'+i)?.value??l.exp})}
+function syncDmg(){const d=ui.dmg;if(!d)return;for(const k of['pid','bid','ctn','pcs','reason','note'])d[k]=$('#dm_'+k)?.value??d[k]}
+function check(exp,stop,pid){
+  if(!exp)return{st:'none'};
+  const dl=daysLeft(exp,stop.date),need=prodById(pid)?.minDays??S.minDays[stop.type]??1;
+  return{st:dl>=need?'ok':'bad',dl,need};
+}
+
+/* ---------- 主渲染 ---------- */
+function render(){
+  const app=$('#app');
+  if(ui.screen!=='app'){$('#hdr').classList.add('hide');app.innerHTML=vAuth();return}
+  $('#hdr').classList.remove('hide');
+  const tabs=TABS[me.role];
+  if(!tabs.some(t=>t[0]===ui.tab))ui.tab=tabs[0][0];
+  if(ui.tab==='stock'&&!FULL&&!ui.recv)ui.recv={po:'',date:iso(new Date()),lines:[]};
+  $('#hdr h1').textContent=!FULL&&me.role!=='driver'?'📦 Infinity 仓库':'🚚 Infinity 司机排程';
+  $('#nav').classList.toggle('hide',tabs.length<2);
+  ST.set('infiTab',ui.tab);
+  $('#who').innerHTML=`${esc(me.name)} · ${ROLES[me.role]} <button class="btn sm sec" data-act="gochpw">🔑</button> <button class="btn sm sec" data-act="logout">退出</button>`;
+  $('#nav').innerHTML=tabs.map(([k,t])=>`<button class="${ui.tab===k?'on':''}" data-act="tab" data-v="${k}">${t}</button>`).join('');
+  app.innerHTML={plan:vPlan,stock:()=>FULL?vStock():vWh(),driver:vDriver,users:vUsers,set:vSet}[ui.tab]();
+  sync();
+}
+
+/* ---------- 登入画面 ---------- */
+function vAuth(){
+  const f=ui.f||{};
+  const msg=(ui.msg?`<div class="err">${esc(ui.msg)}</div>`:'')+(ui.ok?`<div class="note">${esc(ui.ok)}</div>`:'');
+  const head='<h1>🚚 Infinity Food Supply</h1><div class="mut" style="text-align:center;margin-bottom:12px">司机排程系统</div>';
+  const V={
+   boot:()=>`<div class="login">${head}<p class="mut" style="text-align:center">加载中…</p>${msg}</div>`,
+   login:()=>`<div class="login">${head}<div class="card">
+     <label>电话号码 或 Email</label><input id="a_id" data-enter value="${esc(f.id)}" autocomplete="username" placeholder="012-3456789 / name@email.com">
+     <label>密码</label><input id="a_pw" data-enter type="password" autocomplete="current-password">
+     ${msg}
+     <button class="btn" data-primary data-act="login" style="width:100%;margin-top:12px">登入</button>
+     <div class="row" style="margin-top:12px"><a href="#" data-act="goforgot" class="grow">忘记密码?</a>${ui.needsSetup?'<a href="#" data-act="gosetup">首次使用：创建管理员</a>':''}</div>
+    </div></div>`,
+   setup:()=>`<div class="login">${head}<div class="card"><b>创建第一个管理员</b><div class="mut">只有系统还没有任何用户时才能做这一步。</div>
+     <label>名字</label><input id="a_name" data-enter value="${esc(f.name)}">
+     <label>电话号码 或 Email</label><input id="a_id" data-enter value="${esc(f.id)}" autocomplete="username">
+     <label>密码 (至少 6 位)</label><input id="a_pw" data-enter type="password" autocomplete="new-password">
+     <label>再输入一次密码</label><input id="a_pw2" data-enter type="password" autocomplete="new-password">
+     ${msg}
+     <button class="btn" data-primary data-act="setup" style="width:100%;margin-top:12px">创建并登入</button>
+     <div style="margin-top:12px"><a href="#" data-act="gologin">← 返回登入</a></div></div></div>`,
+   forgot:()=>`<div class="login">${head}<div class="card"><b>忘记密码</b>
+     <div class="mut">用 Email 的：我们会寄重设链接给你。用电话号码的：请联系管理员帮你重设。</div>
+     <label>电话号码 或 Email</label><input id="a_id" data-enter value="${esc(f.id)}" autocomplete="username">
+     ${msg}
+     <button class="btn" data-primary data-act="forgot" style="width:100%;margin-top:12px">继续</button>
+     <div style="margin-top:12px"><a href="#" data-act="gologin">← 返回登入</a></div></div></div>`,
+   recovery:()=>`<div class="login">${head}<div class="card"><b>设定新密码</b>
+     <label>新密码 (至少 6 位)</label><input id="a_pw" data-enter type="password" autocomplete="new-password">
+     <label>再输入一次</label><input id="a_pw2" data-enter type="password" autocomplete="new-password">
+     ${msg}<button class="btn" data-primary data-act="newpw" style="width:100%;margin-top:12px">保存新密码</button></div></div>`,
+   chpw:()=>`<div class="login">${head}<div class="card"><b>更改密码</b>
+     <label>新密码 (至少 6 位)</label><input id="a_pw" data-enter type="password" autocomplete="new-password">
+     <label>再输入一次</label><input id="a_pw2" data-enter type="password" autocomplete="new-password">
+     ${msg}<button class="btn" data-primary data-act="newpw" style="width:100%;margin-top:12px">保存</button>
+     <button class="btn sec" data-act="backapp" style="width:100%;margin-top:8px">取消</button></div></div>`,
+   off:()=>`<div class="login">${head}<div class="card"><b>无法使用</b>${msg}<button class="btn sec" data-act="logout" style="width:100%;margin-top:12px">退出</button></div></div>`
+  };
+  return V[ui.screen]();
+}
+const grab=()=>{ui.f={id:$('#a_id')?.value??ui.f.id,name:$('#a_name')?.value??ui.f.name}};
+const pwOK=(a,b)=>{if((a||'').length<6)return'密码至少 6 位';if(a!==b)return'两次密码不一样';return''};
+
+async function enter(){
+  const{data:{user}}=await sb.auth.getUser();
+  if(!user){ui.screen='login';return}
+  const{data:p}=await sb.from('profiles').select('*').eq('id',user.id).maybeSingle();
+  if(!p){ui.screen='off';ui.msg='这个账号还没有开通，请联系管理员。';return}
+  if(!p.active){ui.screen='off';ui.msg='这个账号已被停用，请联系管理员。';return}
+  me=p;
+  ui.driver=p.role==='driver'?p.id:(ST.get('infiDriver')||'');
+  ui.tab=p.role==='driver'?'driver':(ST.get('infiTab')||'plan');
+  await loadAll();
+  ui.screen='app';ui.msg='';ui.ok='';
+}
+
+async function adm(body){
+  const{data,error}=await sb.functions.invoke('admin-users',{body});
+  if(error){let m=error.message;try{m=(await error.context.json()).error||m}catch{}throw new Error(m)}
+  if(data?.error)throw new Error(data.error);
+  return data;
+}
+const genPw=()=>{const c='abcdefghjkmnpqrstuvwxyz23456789';return Array.from({length:8},()=>c[Math.floor(Math.random()*c.length)]).join('')};
+
+/* ---------- 排单 ---------- */
+function vPlan(){
+  const e=ui.edit?S.stops.find(s=>s.id===ui.edit):null;
+  const list=dayStops(ui.date);
+  const byDrv={};list.forEach(s=>(byDrv[s.driver||'']??=[]).push(s));
+  const drv=drivers();
+  return `
+  <div class="row"><div class="grow"><label>送货日期</label><input type="date" value="${ui.date}" data-act="date"></div></div>
+  <details class="card" ${e?'open':''}>
+   <summary><b>${e?'✏️ 修改':'➕ 新增'}送货站点</b></summary>
+   <label>客人 / 店名</label><input id="f_cust" value="${esc(e?.customer)}" placeholder="例如 99 Speedmart Bangsar">
+   <div class="row"><div class="grow"><label>类型</label><select id="f_type">${Object.entries(TYPES).map(([k,v])=>`<option value="${k}" ${e?.type===k?'selected':''}>${v}</option>`).join('')}</select></div>
+   <div class="grow"><label>司机</label><select id="f_drv">${drv.length?'':'<option value="">(先到「用户」新增司机)</option>'}${drv.map(d=>`<option value="${d.id}" ${e?.driver===d.id?'selected':''}>${esc(d.name)}</option>`).join('')}</select></div></div>
+   <label>PO 号码 (超市订单填；WhatsApp 订单可留空)</label><input id="f_po" value="${esc(e?.po)}">
+   <label>地址</label><input id="f_addr" value="${esc(e?.address)}">
+   <label>电话 (客人 WhatsApp)</label><input id="f_tel" value="${esc(e?.phone)}" placeholder="60123456789" inputmode="tel">
+   <label>货品 (每行一项:名称 数量 单位)</label>
+   <div class="row"><select id="f_pick" class="grow">${S.products.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select><button class="btn sec sm" data-act="pick">+ 加入</button></div>
+   <textarea id="f_items" rows="5" placeholder="Farm Fresh Fresh Milk 1L 10 ctn&#10;Farm Fresh Yogurt 5 ctn">${esc(e?itemsText(e.items):'')}</textarea>
+   <label>备注 (收货时间、找谁…)</label><input id="f_note" value="${esc(e?.note)}">
+   <div class="row" style="margin-top:12px"><button class="btn grow" data-act="saveStop">${e?'保存修改':'加入排单'}</button>${e?'<button class="btn sec" data-act="cancelEdit">取消</button>':''}</div>
+  </details>
+  ${!list.length?'<p class="mut">这天还没有排单。</p>':''}
+  ${Object.entries(byDrv).map(([d,ss])=>`
+   <h2>🚚 ${esc(uname(d))} <span class="mut">(${ss.length} 站)</span></h2>
+   <div class="row"><button class="btn sec sm" data-act="copyRoute" data-v="${d}">📲 复制路线 (发 WhatsApp)</button></div>
+   ${ss.map((s,i)=>`<div class="card ${s.status==='delivered'?'done':''}">
+     <div class="row"><b class="grow">${i+1}. ${esc(s.customer)}</b>${badge(s)}</div>
+     <div class="mut">${TYPES[s.type]}${s.po?' · PO '+esc(s.po):''} · ${esc(s.address)}</div>
+     <div style="margin:6px 0">${s.items.map(x=>`${esc(x.name)} <b>${x.qty}${esc(x.unit)}</b>${pidOf(x)?'':' <span class="badge warn">⚠ 不在产品库</span>'}`).join(' · ')}</div>
+     ${s.note?`<div class="mut">📝 ${esc(s.note)}</div>`:''}
+     ${s.status==='failed'?`<div class="badge bad">未送达: ${esc(s.result)}</div>`:''}
+     ${s.status==='delivered'?`<div class="mut">✅ ${esc(s.doneAt)} · 收货人: ${esc(s.receiver||'-')} ${s.result?'· '+esc(s.result):''}</div>`:''}
+     <div class="row" style="margin-top:8px">
+      <button class="btn sec sm" data-act="up" data-v="${s.id}">↑</button><button class="btn sec sm" data-act="down" data-v="${s.id}">↓</button>
+      <button class="btn sec sm" data-act="edit" data-v="${s.id}">修改</button>
+      <button class="btn sec sm" data-act="dup" data-v="${s.id}">复制到明天</button>
+      <button class="btn sec sm" data-act="del" data-v="${s.id}">删除</button>
+     </div></div>`).join('')}`).join('')}`;
+}
+const badge=s=>s.status==='delivered'?'<span class="badge ok">已送达</span>':s.status==='failed'?'<span class="badge bad">失败</span>':'<span class="badge gray">待送</span>';
+
+/* ---------- 司机 ---------- */
+function vDriver(){
+  const drv=ui.driver;
+  const head=`<div class="row">${me.role==='driver'?`<div class="grow"><label>司机</label><b>${esc(me.name)}</b></div>`:
+   `<div class="grow"><label>查看司机</label><select data-act="drv"><option value="">选择司机</option>${drivers().map(d=>`<option value="${d.id}" ${d.id===drv?'selected':''}>${esc(d.name)}</option>`).join('')}</select></div>`}
+   <div class="grow"><label>日期</label><input type="date" value="${ui.date}" data-act="date"></div></div>`;
+  if(!drv)return head;
+  const stops=dayStops(ui.date,drv);
+  if(!stops.length)return head+'<p class="mut">今天没有排单 👍</p>';
+  const L=(S.loads[loadKey(ui.date,drv)]??={confirmed:false,batch:{}});
+  const agg=buildAgg(stops);
+  const sm=S.stockMode;
+  const al=sm?(L.confirmed?{out:L.alloc||[],short:L.short||[]}:allocate(stops)):{out:[],short:[]};
+  const managed=a=>sm&&a.pid;
+  const qtyTxt=a=>a.pid?fmtQty(a.pid,a.qty):a.qty+esc(a.unit);
+  const rows=Object.entries(agg).map(([k,a])=>{
+    const b=L.batch[k]??={};
+    if(managed(a)){
+      const sh=al.short.filter(x=>x.pid===a.pid).reduce((n,x)=>n+x.pcs,0);
+      const byB={};al.out.filter(x=>x.pid===a.pid).forEach(x=>{(byB[x.batch]??={exp:x.exp,pcs:0}).pcs+=x.pcs});
+      const lines=Object.values(byB).sort((p,q)=>p.exp<q.exp?-1:1).map(x=>`<div class="mut">📦 拿到期日 <b>${x.exp}</b> (剩 ${daysLeft(x.exp,ui.date)} 天) 的货：<b>${fmtQty(a.pid,x.pcs)}</b></div>`).join('');
+      return `<div class="item" style="align-items:flex-start"><input type="checkbox" ${b.loaded?'checked':''} data-act="loaded" data-v="${k}" ${L.confirmed?'disabled':''}>
+       <div class="nm"><b>${esc(a.name)}</b> 需要 ${qtyTxt(a)} <span class="mut">已扫 ${fmtQty(a.pid,b.scanned||0)}/${fmtQty(a.pid,a.qty)}</span>
+        ${lines}${sh?`<div style="color:var(--red)">✖ 缺 ${fmtQty(a.pid,sh)}：仓库没有足够寿命期的货</div>`:''}</div></div>`;
+    }
+    const res=a.stops.map(s=>({s,...check(b.exp,s,a.pid)}));
+    const bad=res.filter(r=>r.st==='bad');
+    let tag='<span class="badge gray">输入寿命期</span>';
+    if(b.exp){
+      const dl=daysLeft(b.exp,ui.date);
+      if(!bad.length)tag=`<span class="badge ok">✔ 剩 ${dl} 天</span>`;
+      else if(bad.length===res.length)tag=`<span class="badge bad">✖ 剩 ${dl} 天 · 不合格</span>`;
+      else tag=`<span class="badge warn">⚠ 剩 ${dl} 天 · 部分客人不合格</span>`;
+    }
+    return `<div class="item" style="align-items:flex-start"><input type="checkbox" ${b.loaded?'checked':''} data-act="loaded" data-v="${k}" ${L.confirmed?'disabled':''}>
+     <div class="nm"><b>${esc(a.name)}</b> × ${qtyTxt(a)} <span class="mut">已扫 ${a.pid?fmtQty(a.pid,b.scanned||0):(b.scanned||0)}/${qtyTxt(a)}</span> ${tag}
+      <div class="row" style="margin-top:4px"><span class="mut">最佳食用/到期日:</span><input type="date" style="width:auto" value="${b.exp||''}" data-act="exp" data-v="${k}" ${L.confirmed?'disabled':''}></div>
+      ${bad.map(r=>`<div class="mut" style="color:var(--red)">✖ ${esc(r.s.customer)} 要求至少剩 ${r.need} 天 (此批剩 ${r.dl} 天)</div>`).join('')}
+     </div></div>`}).join('');
+  const allOk=Object.entries(agg).every(([k,a])=>{const b=L.batch[k]||{};if(managed(a))return b.loaded;return b.exp&&b.loaded&&!a.stops.some(s=>check(b.exp,s,a.pid).st==='bad')});
+  const anyBad=Object.entries(agg).some(([k,a])=>!managed(a)&&L.batch[k]?.exp&&a.stops.some(s=>check(L.batch[k].exp,s,a.pid).st==='bad'));
+  const hasShort=sm&&al.short.length>0;
+  const done=stops.filter(s=>s.status&&s.status!=='pending').length;
+  return head+`
+  <h2>① 仓库装货 ${L.confirmed?'<span class="badge ok">已确认</span>':''}</h2>
+  <div class="card">
+   <div class="mut">${sm?'照下面「拿哪一批」去拿货 → 扫条码 → 打勾。确认出发后，系统自动扣库存。':'逐样拿货 → 扫条码 → 看清楚日期 → 输入到期日。红色 = 寿命期不够，不要装，通知仓库换货。'}</div>
+   ${L.confirmed?'':'<button class="btn" style="width:100%;margin:8px 0" data-act="scanLoad">📷 扫描装货</button>'}
+   ${rows}
+   ${L.confirmed?`<button class="btn sec" style="margin-top:10px" data-act="unconfirm">重新修改装货</button>`:
+   `${hasShort?'<div class="badge bad" style="margin-top:10px">⚠ 有货缺 / 寿命期不够，请通知仓库或负责人</div>':''}
+    <button class="btn" style="margin-top:10px;width:100%" data-act="confirmLoad" ${allOk?'':'disabled'}>✅ 全部装好，出发</button>
+    ${anyBad||hasShort?'<button class="btn red" style="margin-top:8px;width:100%" data-act="alertWh">📲 通知仓库 (WhatsApp)</button>':''}`}
+  </div>
+  <h2>② 送货 <span class="mut">${done}/${stops.length} 站完成</span></h2>
+  ${L.confirmed?stops.map((s,i)=>stopCard(s,i,L)).join(''):'<p class="mut">先完成装货确认才能开始送货。</p>'}`;
+}
+
+function stopCard(s,i,L){
+  const open=ui.open===s.id;
+  const fin=s.status==='delivered'||s.status==='failed';
+  const maps='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(s.address||s.customer);
+  return `<div class="card ${fin?'done':''}">
+   <div class="row" data-act="open" data-v="${s.id}"><b class="grow">${i+1}. ${esc(s.customer)}</b>${badge(s)}</div>
+   <div class="mut">${s.po?'PO '+esc(s.po)+' · ':''}${esc(s.address)}</div>
+   ${open?`
+   <div class="row" style="margin:8px 0">
+     <a class="btn sec sm" target="_blank" href="${maps}">🗺 导航</a>
+     ${s.phone?`<a class="btn sec sm" target="_blank" href="https://wa.me/${esc(s.phone.replace(/\D/g,''))}">💬 WhatsApp</a><a class="btn sec sm" href="tel:${esc(s.phone)}">📞 打电话</a>`:''}
+   </div>
+   ${s.note?`<div class="mut">📝 ${esc(s.note)}</div>`:''}
+   ${s.items.map((x,j)=>{
+     const pid=pidOf(x),c=check(itemExp(L,s,j,x),s,pid);
+     const tag=c.st==='ok'?`<span class="badge ok">剩 ${c.dl} 天</span>`:c.st==='bad'?`<span class="badge bad">剩 ${c.dl} 天 · 要求≥${c.need}</span>`:'<span class="badge gray">没日期</span>';
+     return `<div class="item"><input type="checkbox" ${x.unloaded?'checked':''} ${fin?'disabled':''} data-act="unload" data-v="${s.id}" data-j="${j}"><div class="nm">${esc(x.name)} <b>${x.qty}${esc(x.unit)}</b> <span class="mut">扫 ${fmtQty(pid,x.scanned||0)}/${fmtQty(pid,toPcs(x))}</span> ${tag}</div></div>`}).join('')}
+   ${fin?'':`<button class="btn sec" style="width:100%" data-act="scanUnload" data-v="${s.id}">📷 扫描卸货</button>
+   <label>收货人 / 备注</label><input id="rc_${s.id}" placeholder="例如 Siti 收货 / 少收 1kg">
+   <div class="row" style="margin-top:10px">
+     <button class="btn grow" data-act="deliver" data-v="${s.id}">✅ 已送达</button>
+     <button class="btn red" data-act="fail" data-v="${s.id}">✖ 送不到</button>
+   </div>`}`:''}
+  </div>`;
+}
+
+/* ---------- 用户 (管理员) ---------- */
+function vUsers(){
+  return `
+  ${ui.note?`<div class="card" style="border-color:var(--green)"><b>✅ 已完成</b><pre style="white-space:pre-wrap;margin:6px 0">${esc(ui.note)}</pre>
+    <div class="row"><button class="btn sec sm" data-act="copynote">📋 复制 (发给本人)</button><button class="btn sec sm" data-act="clearnote">关闭</button></div></div>`:''}
+  <details class="card"><summary><b>➕ 新增用户</b></summary>
+   <label>名字</label><input id="u_name">
+   <label>登入用的 电话号码 或 Email</label><input id="u_id" placeholder="012-3456789 / name@email.com">
+   <label>角色</label><select id="u_role"><option value="driver">司机</option><option value="manager">负责人</option><option value="admin">管理员</option></select>
+   <label>临时密码 (至少 6 位)</label><div class="row"><input id="u_pw" class="grow" value="${genPw()}"><button class="btn sec sm" data-act="genpw" data-v="u_pw">重新生成</button></div>
+   <button class="btn" style="width:100%;margin-top:12px" data-act="addUser">创建用户</button>
+  </details>
+  <h2>所有用户 (${S.users.length})</h2>
+  ${S.users.map(u=>`<div class="card ${u.active?'':'done'}">
+    <div class="row"><b class="grow">${esc(u.name)}</b><span class="badge ${u.role==='admin'?'warn':u.role==='manager'?'ok':'gray'}">${ROLES[u.role]}</span>${u.active?'':'<span class="badge bad">已停用</span>'}</div>
+    <div class="mut">${isPhone(u.identifier)?'📞':'✉️'} ${esc(u.identifier)}${u.id===me.id?' (你)':''}</div>
+    ${ui.reset===u.id?`<label>新密码</label><div class="row"><input id="rp_pw" class="grow" value="${genPw()}"><button class="btn sec sm" data-act="genpw" data-v="rp_pw">重新生成</button></div>
+      <div class="row" style="margin-top:8px"><button class="btn sm" data-act="doreset" data-v="${u.id}">确认重设</button><button class="btn sec sm" data-act="cancelreset">取消</button></div>`:`
+    <div class="row" style="margin-top:8px">
+     <select style="width:auto" data-act="urole" data-v="${u.id}">${Object.entries(ROLES).map(([k,v])=>`<option value="${k}" ${u.role===k?'selected':''}>${v}</option>`).join('')}</select>
+     <button class="btn sec sm" data-act="askreset" data-v="${u.id}">重设密码</button>
+     ${u.id===me.id?'':`<button class="btn sec sm" data-act="toggleUser" data-v="${u.id}">${u.active?'停用':'启用'}</button><button class="btn sec sm" data-act="delUser" data-v="${u.id}">删除</button>`}
+    </div>`}
+  </div>`).join('')}
+  <p class="mut">忘记密码：有 Email 的用户可以在登入页自己重设；只有电话的，请在这里帮他「重设密码」，再把新密码 WhatsApp 给他。</p>`;
+}
+
+/* ---------- 仓库 (简易: 扫描 · 进货 · 填数量) ---------- */
+const lineMsg=(p,i)=>{const l=ui.recv.lines[i];
+  return `<div><span class="badge ok">✔ ${esc(p.name)}</span> 目前 <b>${l.ctn||0}</b> 箱 + <b>${l.pcs||0}</b> 件</div>
+   <div class="row" style="margin-top:6px"><span class="mut">到期日</span><input type="date" style="width:auto" value="${esc(l.exp)}" data-act="rvdate" data-i="${i}">
+   <button class="btn sec sm" data-act="rvNewBatch" data-v="${p.id}">换新到期日 (新批次)</button></div>`};
+const entryMsg=(p,i)=>{const l=ui.recv.lines[i];
+  return `<div><span class="badge ok">✔ ${esc(p.name)}</span></div>
+   <div class="row" style="margin-top:8px"><div><label>箱 ctn</label><input id="sq_ctn" type="number" min="0" inputmode="numeric" style="width:100px" value="${esc(l.ctn)}" data-i="${i}"></div>
+    <div><label>散装 件</label><input id="sq_pcs" type="number" min="0" inputmode="numeric" style="width:100px" value="${esc(l.pcs)}" data-i="${i}"></div>
+    <div class="grow"><label>到期日</label><input id="sq_exp" type="date" value="${esc(l.exp)}" data-i="${i}"></div></div>
+   <div class="row" style="margin-top:8px"><button class="btn grow" data-act="sqDone">✓ 确定，扫下一个</button><button class="btn sec" data-act="rvNewBatch" data-v="${p.id}">换新到期日</button></div>`};
+const recvHandler=c=>withProduct(c,(p,ctn)=>{
+  const r=ui.recv;let i=r.lines.map(x=>x.pid).lastIndexOf(p.id);
+  if(i<0){r.lines=r.lines.filter(x=>x.pid||x.ctn||x.pcs||x.exp);r.lines.push({...newLine(),pid:p.id});i=r.lines.length-1}
+  const l=r.lines[i];
+  if(ui.plusOne){const k=ctn?'ctn':'pcs';l[k]=(+l[k]||0)+1;render();return lineMsg(p,i)}
+  scanCtx.hold=true;render();return entryMsg(p,i)});
+function vWh(){
+  const r=ui.recv;
+  const recvLog=S.moves.filter(m=>m.type==='receive').slice(0,30);
+  const undone=new Set(S.moves.filter(m=>(m.note||'').startsWith('撤销:')).map(m=>m.note.slice(3)));
+  return `
+  <div class="card">
+   <div class="row"><div class="grow"><label>PO / DO 号码 (点货可填「期初盘点」)</label><input id="rv_po" data-act="rvf" value="${esc(r.po)}"></div>
+   <div class="grow"><label>日期</label><input id="rv_date" type="date" data-act="rvf" value="${r.date}"></div></div>
+   <button class="btn" style="width:100%;font-size:20px;padding:18px;margin-top:12px" data-act="rvScan">📷 扫描</button>
+   <input id="rv_q" style="margin-top:10px" placeholder="或：输入产品名 / 条码 (扫描枪直接扫)" autocomplete="off">
+   <div id="rv_res">${ui.rvmsg||''}</div>
+  </div>
+  ${!r.lines.length?'<p class="mut" style="text-align:center">按「📷 扫描」扫产品条码，然后自己填箱数 (几百箱不用一箱一箱扫)。</p>':''}
+  ${r.lines.map((l,i)=>{const p=prodById(l.pid);return `<div class="card">
+    <div class="row"><b class="grow">${esc(p?.name||'(没选产品)')}</b><button class="btn sec sm" data-act="rvDel" data-v="${i}">✕</button></div>
+    <div class="row"><div><label>箱 ctn</label><input id="rl_ctn_${i}" type="number" min="0" inputmode="numeric" style="width:90px" data-act="rvf" value="${esc(l.ctn)}"></div>
+     <div><label>散装 件</label><input id="rl_pcs_${i}" type="number" min="0" inputmode="numeric" style="width:90px" data-act="rvf" value="${esc(l.pcs)}"></div>
+     <div class="grow"><label>到期日</label><input id="rl_exp_${i}" type="date" data-act="rvf" value="${esc(l.exp)}"></div></div>
+    ${p&&!p.perCtn?'<div class="mut">一箱几件还没设，保存时会问你一次。</div>':''}</div>`}).join('')}
+  ${r.lines.length?`<button class="btn" style="width:100%;font-size:18px;padding:16px" data-act="rvSave">✅ 保存进货 (${r.lines.length} 项)</button>`:''}
+  <details class="card" style="margin-top:16px"><summary><b>📋 已进货记录</b> <span class="mut">(最近 30 笔)</span></summary>
+   ${recvLog.map(m=>`<div class="item"><div class="nm"><span class="mut">${new Date(m.created_at).toLocaleString('en-GB',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</span> ${esc(prodById(m.product_id)?.name||m.product_id)}
+     <b style="color:var(--green)">+${fmtQty(m.product_id,m.delta)}</b>${m.ref?` <span class="mut">${esc(m.ref)}</span>`:''}</div>
+     ${undone.has(m.id)?'<span class="badge gray">已撤销</span>':`<button class="btn sec sm" data-act="rvUndo" data-v="${m.id}">撤销</button>`}</div>`).join('')||'<div class="mut">还没有记录</div>'}
+  </details>`;
+}
+
+/* ---------- 仓库 (完整版) ---------- */
+const TL={receive:'📥 收货',load:'🚚 装车',load_undo:'↩ 撤销装车',damage:'🗑 报损',expired:'🗑 过期报废',adjust:'✅ 盘点调整',return:'↩ 退回'};
+const dlCls=d=>d<0?'bad':d<=2?'warn':'ok';
+function vStock(){
+  const today=iso(new Date());
+  const need=buildAgg(dayStops(ui.date));
+  const byP={};S.batches.filter(b=>b.qty>0).forEach(b=>(byP[b.product_id]??=[]).push(b));
+  const noCtn=S.products.filter(p=>!p.perCtn).length;
+  const cards=S.products.map(p=>{
+    const bs=(byP[p.id]||[]).sort((a,b)=>a.expiry<b.expiry?-1:1);
+    const tot=bs.reduce((n,b)=>n+b.qty,0),nd=need[p.id]?.qty||0;
+    const ex=bs.filter(b=>daysLeft(b.expiry,today)<0).reduce((n,b)=>n+b.qty,0);
+    const near=bs.filter(b=>{const d=daysLeft(b.expiry,today);return d>=0&&d<=2}).reduce((n,b)=>n+b.qty,0);
+    const tags=[!p.perCtn?'<span class="badge warn">⚠ 未设每箱件数</span>':'',
+      ex?`<span class="badge bad">已过期 ${fmtQty(p.id,ex)}</span>`:'',
+      near?`<span class="badge warn">快到期 ${fmtQty(p.id,near)}</span>`:'',
+      nd>tot?`<span class="badge bad">缺 ${fmtQty(p.id,nd-tot)}</span>`:''].filter(Boolean).join(' ');
+    const open=ui.openP===p.id;
+    return `<div class="card"><div class="row" data-act="openP" data-v="${p.id}"><b class="grow">${esc(p.name)}</b><b>${tot?fmtQty(p.id,tot):'<span class="mut">无库存</span>'}</b></div>
+     <div class="mut">${ui.date} 要出 ${fmtQty(p.id,nd)} ${tags}</div>
+     ${open?(bs.length?bs.map(b=>{const dl=daysLeft(b.expiry,today);return `<div class="item"><div class="nm">到期 <b>${b.expiry}</b> <span class="badge ${dlCls(dl)}">${dl<0?'已过期':'剩 '+dl+' 天'}</span>
+       <div class="mut">${fmtQty(p.id,b.qty)} · 收货 ${b.received_date}${b.po_no?' · PO '+esc(b.po_no):''}</div></div></div>`}).join(''):'<div class="mut" style="margin-top:6px">没有库存</div>'):''}
+    </div>`}).join('');
+  const log=S.moves.slice(0,40).map(m=>`<div class="item"><div class="nm"><span class="mut">${new Date(m.created_at).toLocaleString('en-GB',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</span> ${TL[m.type]||m.type} · ${esc(prodById(m.product_id)?.name||m.product_id)}
+    <b style="color:var(--${m.delta>0?'green':'red'})">${m.delta>0?'+':'−'}${fmtQty(m.product_id,Math.abs(m.delta))}</b>${m.note&&!/^\d{4}-/.test(m.note)?` <span class="mut">${esc(m.note)}</span>`:''}</div></div>`).join('');
+  return `
+  <div class="row"><button class="btn grow" data-act="recvOpen">📥 收货入库</button><button class="btn sec" data-act="dmgOpen">🗑 报损</button><button class="btn sec" data-act="countOpen">✅ 盘点</button></div>
+  ${!S.stockMode?'<div class="card" style="border-color:var(--org)"><b>库存管理还没启用</b><div class="mut">先把现有库存「收货入库」，然后到「⚙️ 设置」开启，司机装货才会自动扣库存。</div></div>':''}
+  ${noCtn?`<div class="mut" style="margin-top:8px">⚠ ${noCtn} 个产品还没设「每箱几件」，请到设置填写，否则箱和件换算不了。</div>`:''}
+  ${ui.recv?vRecv():''}${ui.dmg?vDmg():''}${ui.count?vCount():''}
+  <h2>库存 <span class="mut">(点产品看各批到期日)</span></h2>
+  ${cards}
+  <h2>最近库存记录</h2>
+  <div class="card">${log||'<div class="mut">还没有记录</div>'}</div>`;
+}
+function vRecv(){const r=ui.recv;
+  return `<div class="card"><b>📥 收货入库 (Farm Fresh 送货)</b>
+   <div class="row"><div class="grow"><label>PO / DO 号码</label><input id="rv_po" data-act="rvf" value="${esc(r.po)}"></div><div class="grow"><label>收货日期</label><input id="rv_date" type="date" data-act="rvf" value="${r.date}"></div></div>
+   ${r.lines.map((l,i)=>`<div class="item" style="flex-wrap:wrap;align-items:flex-end"><div style="width:100%"><select id="rl_pid_${i}" data-act="rvf"><option value="">选择产品</option>${S.products.map(p=>`<option value="${p.id}" ${l.pid===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select></div>
+     <div><label>箱 ctn</label><input id="rl_ctn_${i}" type="number" min="0" inputmode="numeric" style="width:80px" data-act="rvf" value="${esc(l.ctn)}"></div>
+     <div><label>散装 件</label><input id="rl_pcs_${i}" type="number" min="0" inputmode="numeric" style="width:80px" data-act="rvf" value="${esc(l.pcs)}"></div>
+     <div class="grow"><label>到期日</label><input id="rl_exp_${i}" type="date" data-act="rvf" value="${esc(l.exp)}"></div>
+     <button class="btn sec sm" data-act="rvDel" data-v="${i}">✕</button></div>`).join('')}
+   <div class="row" style="margin-top:8px"><button class="btn sec sm" data-act="rvAdd">+ 加一行</button><button class="btn sec sm" data-act="rvScan">📷 扫码加入</button></div>
+   <div class="mut" style="margin-top:6px">每个产品、每个到期日各填一行。散装(跌爆后剩的、单卖的)填在「散装 件」。</div>
+   <div class="row" style="margin-top:12px"><button class="btn grow" data-act="rvSave">保存入库</button><button class="btn sec" data-act="rvClose">取消</button></div></div>`}
+function vDmg(){const d=ui.dmg;
+  const ps=S.products.filter(p=>S.batches.some(b=>b.product_id===p.id&&b.qty>0));
+  const bs=S.batches.filter(b=>b.product_id===d.pid&&b.qty>0).sort((a,b)=>a.expiry<b.expiry?-1:1);
+  return `<div class="card"><b>🗑 报损 / 过期报废</b>
+   <label>产品</label><select id="dm_pid" data-act="dmf" data-k="pid"><option value="">选择产品</option>${ps.map(p=>`<option value="${p.id}" ${d.pid===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
+   <label>哪一批</label><select id="dm_bid" data-act="dmf" data-k="bid">${bs.map(b=>`<option value="${b.id}" ${(d.bid||bs[0].id)===b.id?'selected':''}>到期 ${b.expiry} · 现有 ${fmtQty(b.product_id,b.qty)}</option>`).join('')}</select>
+   <div class="row"><div class="grow"><label>箱 ctn</label><input id="dm_ctn" type="number" min="0" inputmode="numeric" data-act="dmf" data-k="ctn" value="${esc(d.ctn)}"></div><div class="grow"><label>散装 件 (跌爆几件)</label><input id="dm_pcs" type="number" min="0" inputmode="numeric" data-act="dmf" data-k="pcs" value="${esc(d.pcs)}"></div></div>
+   <label>原因</label><select id="dm_reason" data-act="dmf" data-k="reason">${['跌爆','过期','其他'].map(x=>`<option ${d.reason===x?'selected':''}>${x}</option>`).join('')}</select>
+   <label>备注</label><input id="dm_note" data-act="dmf" data-k="note" value="${esc(d.note)}" placeholder="例如 卸货时跌落">
+   <div class="row" style="margin-top:12px"><button class="btn grow" data-act="dmSave">确认扣除</button><button class="btn sec" data-act="dmgClose">取消</button></div></div>`}
+function vCount(){
+  return `<div class="card"><b>✅ 盘点</b><div class="mut">数一数实际有多少，填「箱」和「散装件」。没填的批次不会改。</div>
+   <div class="row" style="margin-top:6px"><button class="btn sec sm" data-act="ctScan">📷 扫码找产品</button></div>
+   ${S.products.map(p=>{const list=S.batches.filter(b=>b.product_id===p.id).sort((a,b)=>a.expiry<b.expiry?-1:1);if(!list.length)return'';
+     return `<div style="margin-top:10px"><b>${esc(p.name)}</b>${list.map(b=>`<div class="item" style="flex-wrap:wrap"><div class="nm">到期 ${b.expiry}<div class="mut">系统记录：${fmtQty(p.id,b.qty)}</div></div>
+       <input id="ct_${b.id}_c" type="number" min="0" inputmode="numeric" placeholder="箱" style="width:70px"><input id="ct_${b.id}_p" type="number" min="0" inputmode="numeric" placeholder="件" style="width:70px"></div>`).join('')}</div>`}).join('')}
+   <div class="row" style="margin-top:12px"><button class="btn grow" data-act="ctSave">提交盘点</button><button class="btn sec" data-act="countClose">取消</button></div></div>`}
+
+/* ---------- 设置 ---------- */
+function vSet(){
+  return `
+  <h2>库存管理</h2>
+  <div class="card"><label style="display:flex;gap:10px;align-items:center;margin:0;color:inherit;font-size:16px"><input type="checkbox" style="width:24px;height:24px" ${S.stockMode?'checked':''} data-act="stockmode"> 启用库存管理</label>
+   <div class="mut">开启后：司机装货时，系统按「先到期先出」自动分配批次并扣库存。请先到「📦 仓库」把现有库存入库，再开启。</div></div>
+  <h2>最少剩余寿命期 (天)</h2>
+  <div class="card"><div class="mut">送到客人手上时，货品至少要剩几天。不够就会显示红色。</div>
+   ${Object.entries(TYPES).map(([k,v])=>`<div class="row" style="margin-top:6px"><span class="grow">${v}</span><input type="number" min="0" style="width:80px" id="md_${k}" value="${S.minDays[k]}"></div>`).join('')}
+   <button class="btn" style="width:100%;margin-top:10px" data-act="saveSet">保存</button></div>
+  <h2>产品库 (Farm Fresh)</h2>
+  <div class="card"><div class="mut">「每箱几件」一定要填 (库存箱和件靠它换算)。条码：单件和整箱的条码通常不同，各扫一次。「最少天数」留空 = 用上面客人类型的设定。</div>
+   ${S.products.map(p=>`<div class="item" style="flex-wrap:wrap"><input class="grow" style="min-width:60%" value="${esc(p.name)}" data-act="pname" data-v="${p.id}">
+     <select style="width:auto" data-act="pcat" data-v="${p.id}">${['鲜奶','UHT','酸奶','冰淇淋','其他'].map(c=>`<option ${p.cat===c?'selected':''}>${c}</option>`).join('')}</select>
+     <input type="number" min="1" placeholder="每箱几件" style="width:95px" value="${p.perCtn??''}" data-act="pper" data-v="${p.id}">
+     <input type="number" min="0" placeholder="最少天数" style="width:90px" value="${p.minDays??''}" data-act="pmin" data-v="${p.id}">
+     <button class="btn sec sm" data-act="scanBind" data-v="${p.id}" data-k="u">📷 单件条码 (${p.codes.length})</button>
+     <button class="btn sec sm" data-act="scanBind" data-v="${p.id}" data-k="c">📷 箱条码 (${(p.ctnCodes||[]).length})</button>
+     ${p.codes.length||(p.ctnCodes||[]).length?`<button class="btn sec sm" data-act="clrcodes" data-v="${p.id}">清条码</button>`:''}
+     <button class="btn sec sm" data-act="pdel" data-v="${p.id}">删除</button></div>`).join('')}
+   <label>批量新增产品 (每行一个)</label><textarea id="p_bulk" rows="3" placeholder="Farm Fresh Goat Milk 1L"></textarea>
+   <button class="btn sec" style="margin-top:6px" data-act="padd">新增</button>
+  </div>
+  <h2>备份</h2>
+  <button class="btn sec" data-act="export">导出备份 (JSON)</button>`;
+}
+
+/* ---------- 事件 ---------- */
+let rev=0;
+document.addEventListener('click',onEv);
+document.addEventListener('change',onEv);
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.closest?.('[data-enter]'))document.querySelector('[data-primary]')?.click()});
+const MGR_ONLY=new Set(['saveStop','cancelEdit','edit','del','dup','up','down','pick','pname','pcat','pmin','pdel','clrcodes','padd','scanBind','saveSet','copyRoute','export','rvdate','plusone','sqDone','rvNewBatch','rvPick','rvUndo','scanChoose','noop','assign2','pper','stockmode','openP','recvOpen','rvClose','rvAdd','rvDel','rvf','rvScan','rvSave','dmgOpen','dmgClose','dmf','dmSave','countOpen','countClose','ctSave','ctScan']);
+const ADMIN_ONLY=new Set(['addUser','askreset','doreset','toggleUser','delUser','urole','genpw','cancelreset','copynote','clearnote']);
+async function onEv(ev){
+  const t=ev.target.closest('[data-act]');if(!t)return;
+  const a=t.dataset.act,v=t.dataset.v,isChange=ev.type==='change';
+  const chg=['date','drv','exp','loaded','unload','pname','pcat','pmin','urole','pper','stockmode','rvf','dmf','rvdate','plusone'];
+  if(chg.includes(a)!==isChange)return;
+  if(t.tagName==='A')ev.preventDefault();
+  if(ui.screen==='app'){
+    if(MGR_ONLY.has(a)&&!isMgr())return;
+    if(ADMIN_ONLY.has(a)&&me.role!=='admin')return;
+  }
+  rev++;
+  const L=()=>S.loads[loadKey(ui.date,ui.driver)];
+  const stop=()=>S.stops.find(s=>s.id===v);
+  try{
+  switch(a){
+   /* --- 登入相关 --- */
+   case'gologin':grab();ui.screen='login';ui.msg='';ui.ok='';break;
+   case'goforgot':grab();ui.screen='forgot';ui.msg='';ui.ok='';break;
+   case'gosetup':grab();ui.screen='setup';ui.msg='';ui.ok='';break;
+   case'gochpw':ui.screen='chpw';ui.msg='';ui.ok='';break;
+   case'backapp':ui.screen='app';ui.msg='';break;
+   case'login':{
+     grab();ui.msg='';const em=toEmail($('#a_id').value),pw=$('#a_pw').value;
+     if(!em||!pw){ui.msg='请输入电话/email 和密码';break}
+     const{error}=await sb.auth.signInWithPassword({email:em,password:pw});
+     if(error){ui.msg='电话/email 或密码不对';break}
+     await enter();break}
+   case'setup':{
+     grab();ui.msg='';const name=$('#a_name').value.trim(),idn=$('#a_id').value.trim(),pw=$('#a_pw').value;
+     const pe=pwOK(pw,$('#a_pw2').value);
+     if(!name||!toEmail(idn)){ui.msg='请填写名字和正确的电话/email';break}
+     if(pe){ui.msg=pe;break}
+     await adm({action:'bootstrap',identifier:idn,name,password:pw});
+     const{error}=await sb.auth.signInWithPassword({email:toEmail(idn),password:pw});
+     if(error){ui.msg=error.message;ui.screen='login';break}
+     ui.needsSetup=false;await enter();break}
+   case'forgot':{
+     grab();ui.msg='';ui.ok='';const raw=$('#a_id').value.trim(),em=toEmail(raw);
+     if(!em){ui.msg='请输入正确的电话或 email';break}
+     if(isPhone(raw)){ui.ok='用电话号码登入的账号，请联系管理员帮你重设密码，他会 WhatsApp 新密码给你。';break}
+     const{error}=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname});
+     if(error){ui.msg='发送失败: '+error.message;break}
+     ui.ok='如果这个 email 已注册，重设链接已寄出，请到邮箱查看 (也看看垃圾邮件)。';break}
+   case'newpw':{
+     const pw=$('#a_pw').value,pe=pwOK(pw,$('#a_pw2').value);
+     if(pe){ui.msg=pe;break}
+     const{error}=await sb.auth.updateUser({password:pw});
+     if(error){ui.msg=error.message;break}
+     try{if(location.hash)history.replaceState(null,'',location.pathname+location.search)}catch{}
+     if(me){ui.screen='app';toast('密码已更改 ✅')}else await enter();
+     break}
+   case'logout':await chain;await sb.auth.signOut();me=null;S={users:[],products:[],stops:[],loads:{},minDays:{...DEF_MIN},batches:[],moves:[],stockMode:false};ui.screen='login';ui.msg='';ui.ok='';ui.f={};break;
+
+   /* --- 导航 --- */
+   case'tab':ui.tab=v;break;
+   case'date':ui.date=t.value||ui.date;break;
+   case'drv':ui.driver=t.value;ST.set('infiDriver',t.value);break;
+
+   /* --- 排单 --- */
+   case'saveStop':{
+     const o={customer:$('#f_cust').value.trim(),type:$('#f_type').value,driver:$('#f_drv').value,po:$('#f_po').value.trim(),address:$('#f_addr').value.trim(),phone:$('#f_tel').value.trim(),items:parseItems($('#f_items').value),note:$('#f_note').value.trim()};
+     if(!o.customer||!o.items.length){alert('请填写客人名字和货品');return}
+     if(!o.driver){alert('请先选择司机 (没有司机的话，到「用户」新增)');return}
+     if(ui.edit){Object.assign(S.stops.find(s=>s.id===ui.edit),o);ui.edit=null}
+     else S.stops.push({id:id(),date:ui.date,seq:dayStops(ui.date,o.driver).length+1,status:'pending',...o});
+     break}
+   case'cancelEdit':ui.edit=null;break;
+   case'edit':ui.edit=v;break;
+   case'del':if(confirm('删除这站?'))S.stops=S.stops.filter(s=>s.id!==v);break;
+   case'dup':{const s=stop(),d=new Date(ui.date);d.setDate(d.getDate()+1);
+     S.stops.push({...structuredClone(s),id:id(),date:iso(d),status:'pending',result:'',doneAt:'',receiver:'',items:s.items.map(i=>({...i,unloaded:false,scanned:0}))});alert('已复制到 '+iso(d));break}
+   case'up':case'down':{
+     const s=stop(),ls=dayStops(s.date,s.driver),i=ls.indexOf(s),j=a==='up'?i-1:i+1;
+     if(ls[j]){ls.forEach((x,k)=>x.seq=k+1);[s.seq,ls[j].seq]=[ls[j].seq,s.seq]}break}
+   case'copyRoute':{
+     const ss=dayStops(ui.date,v);
+     const txt=`🚚 *${uname(v)}* 送货路线 ${ui.date}\n\n`+ss.map((s,i)=>`*${i+1}. ${s.customer}* (${TYPES[s.type]})${s.po?'\nPO: '+s.po:''}\n📍 ${s.address}\n${s.items.map(x=>'• '+x.name+' '+x.qty+x.unit).join('\n')}${s.note?'\n📝 '+s.note:''}${s.phone?'\n📞 '+s.phone:''}`).join('\n\n');
+     navigator.clipboard.writeText(txt).then(()=>alert('已复制，去 WhatsApp 贴上发给司机'));return}
+   case'pick':{const ta=$('#f_items'),p=prodById($('#f_pick').value);ta.value+=(ta.value&&!ta.value.endsWith('\n')?'\n':'')+p.name+' 1 ctn';return}
+
+   /* --- 司机 --- */
+   case'exp':{(L().batch[v]??={}).exp=t.value;break}
+   case'loaded':{(L().batch[v]??={}).loaded=t.checked;break}
+   case'confirmLoad':{
+     const Lx=L();if(Lx.confirmed)break;
+     if(S.stockMode){
+       await loadStock();
+       const stops=dayStops(ui.date,ui.driver),al=allocate(stops);
+       if(al.short.length&&!confirm('⚠ 以下货库存不够或寿命期不够:\n'+al.short.map(x=>`${x.name} 缺 ${fmtQty(x.pid,x.pcs)} (${x.customer})`).join('\n')+'\n\n仍然出发?'))return;
+       if(al.out.length){
+         const rows=al.out.map(x=>({id:id(),batch_id:x.batch,product_id:x.pid,delta:-x.pcs,type:'load',ref:x.stop,note:ui.date+'|'+ui.driver}));
+         const{error}=await sb.from('stock_moves').insert(rows);if(error)throw error;
+       }
+       Lx.alloc=al.out;Lx.short=al.short;
+       await loadStock();
+     }
+     Lx.confirmed=true;break}
+   case'unconfirm':{
+     const Lx=L(),stops=dayStops(ui.date,ui.driver);
+     if(stops.some(s=>s.status==='delivered'||s.status==='failed')){alert('已经有站点送达/失败，不能再重新修改装货');return}
+     if(S.stockMode&&Lx.alloc?.length){
+       const rows=Lx.alloc.map(x=>({id:id(),batch_id:x.batch,product_id:x.pid,delta:x.pcs,type:'load_undo',ref:x.stop,note:ui.date+'|'+ui.driver}));
+       const{error}=await sb.from('stock_moves').insert(rows);if(error)throw error;
+       Lx.alloc=[];Lx.short=[];await loadStock();
+     }
+     Lx.confirmed=false;break}
+   case'alertWh':{
+     const stops=dayStops(ui.date,ui.driver);let txt;
+     if(S.stockMode){
+       const al=allocate(stops);
+       txt=`⚠️ 仓库缺货 (${uname(ui.driver)} ${ui.date})\n`+al.short.map(x=>`• ${x.name} 缺 ${fmtQty(x.pid,x.pcs)} — ${x.customer} 要求寿命≥${x.min} 天`).join('\n');
+     }else{
+       const bad=[];
+       stops.forEach(s=>s.items.forEach(i=>{const b=L().batch[ik(i)];const c=check(b?.exp,s,pidOf(i));if(c.st==='bad')bad.push(`• ${i.name} — 剩 ${c.dl} 天，${s.customer} 要求≥${c.need} 天`)}));
+       txt=`⚠️ 仓库注意 (${uname(ui.driver)} ${ui.date})\n以下货品寿命期不够，请换新货:\n`+[...new Set(bad)].join('\n');
+     }
+     navigator.clipboard.writeText(txt).then(()=>alert('已复制，去 WhatsApp 贴给仓库'));return}
+   case'open':ui.open=ui.open===v?null:v;break;
+   case'unload':{stop().items[+t.dataset.j].unloaded=t.checked;break}
+   case'deliver':{
+     const s=stop();
+     if(s.items.some(i=>!i.unloaded)){alert('还有货品没打勾卸货');return}
+     const bad=s.items.filter((i,j)=>check(itemExp(L(),s,j,i),s,pidOf(i)).st==='bad');
+     if(bad.length&&!confirm('⚠ '+bad.map(i=>i.name).join(', ')+' 寿命期低于客人要求，确定还是交给客人?'))return;
+     const r=$('#rc_'+v).value.trim();
+     Object.assign(s,{status:'delivered',doneAt:new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),receiver:r,result:bad.length?'寿命期低于要求':''});ui.open=null;break}
+   case'fail':{
+     const why=prompt('送不到的原因? (客人不在 / 拒收 / 寿命期不够 …)');if(!why)return;
+     const Lx=L();
+     if(S.stockMode){ // 货带回仓库 → 库存加回
+       const al=(Lx.alloc||[]).filter(x=>x.stop===v);
+       if(al.length){
+         const rows=al.map(x=>({id:id(),batch_id:x.batch,product_id:x.pid,delta:x.pcs,type:'return',ref:v,note:'送不到退回: '+why}));
+         const{error}=await sb.from('stock_moves').insert(rows);if(error)throw error;
+         Lx.alloc=Lx.alloc.filter(x=>x.stop!==v);await loadStock();
+       }
+     }
+     Object.assign(stop(),{status:'failed',result:why,doneAt:new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})});ui.open=null;break}
+
+   /* --- 扫描 --- */
+   case'scanBind':{const p=prodById(v),ctn=t.dataset.k==='c';
+     openScan('扫描'+(ctn?'整箱':'单件')+'条码 → '+p.name,c=>{
+       const o=S.products.find(x=>x.codes.includes(c)||(x.ctnCodes||[]).includes(c));
+       if(o&&o!==p)return `<span class="badge bad">✖ 这个条码已属于 ${esc(o.name)}</span>`;
+       const lst=ctn?(p.ctnCodes??=[]):p.codes;
+       if(!lst.includes(c))lst.push(c);save();return `<span class="badge ok">✔ 已记住 ${esc(c)}</span>`},()=>render());return}
+   case'scanLoad':{const stops=dayStops(ui.date,ui.driver);openScan('扫描装货 (箱条码=整箱，单件条码=1件)',c=>withProduct(c,(p,ctn)=>{
+       const a=buildAgg(stops)[p.id];
+       if(!a)return `<span class="badge bad">✖ ${esc(p.name)} 不在今天的单，不要装！</span>`;
+       const n=ctn?perCtn(p.id):1;
+       const b=(L().batch[p.id]??={});b.scanned=(b.scanned||0)+n;if(b.scanned>=a.qty)b.loaded=true;render();
+       return b.scanned>a.qty?`<span class="badge warn">⚠ ${esc(p.name)} 多扫了 (${fmtQty(p.id,b.scanned)}/${fmtQty(p.id,a.qty)})</span>`:
+        `<span class="badge ok">✔ ${esc(p.name)} ${fmtQty(p.id,b.scanned)}/${fmtQty(p.id,a.qty)}</span>${(!S.stockMode&&!b.exp)?' <b>→ 记得输入到期日</b>':''}`}));return}
+   case'scanUnload':{const s=stop();openScan('扫描卸货 · '+s.customer,c=>withProduct(c,(p,ctn)=>{
+       const it=s.items.find(i=>pidOf(i)===p.id);
+       if(!it)return `<span class="badge bad">✖ ${esc(p.name)} 这站没有！拿错货</span>`;
+       const n=ctn?perCtn(p.id):1,need=toPcs(it);
+       it.scanned=(it.scanned||0)+n;if(it.scanned>=need)it.unloaded=true;render();
+       return it.scanned>need?`<span class="badge warn">⚠ ${esc(p.name)} 多扫了 (${fmtQty(p.id,it.scanned)}/${fmtQty(p.id,need)})</span>`:`<span class="badge ok">✔ ${esc(p.name)} ${fmtQty(p.id,it.scanned)}/${fmtQty(p.id,need)}</span>`}));return}
+   case'assign2':{const p=prodById(v);const lst=t.dataset.k==='c'?(p.ctnCodes??=[]):p.codes;
+     if(!lst.includes(scanCtx.code))lst.push(scanCtx.code);save();scanCtx.feed(scanCtx.code);return}
+   case'assign':{const p=prodById($('#sassign').value);if(!p)return;const lst=v==='c'?(p.ctnCodes??=[]):p.codes;if(!lst.includes(scanCtx.code))lst.push(scanCtx.code);save();scanCtx.feed(scanCtx.code);return}
+
+   /* --- 仓库 --- */
+   case'pper':prodById(v).perCtn=t.value===''?null:Math.max(1,Math.round(+t.value));break;
+   case'stockmode':S.stockMode=t.checked;break;
+   case'openP':ui.openP=ui.openP===v?null:v;break;
+   case'recvOpen':ui.recv={po:'',date:iso(new Date()),lines:[newLine()]};ui.dmg=null;ui.count=false;break;
+   case'rvClose':ui.recv=null;break;
+   case'rvAdd':syncRecv();ui.recv.lines.push(newLine());break;
+   case'rvDel':syncRecv();ui.recv.lines.splice(+v,1);if(!ui.recv.lines.length)ui.recv.lines.push(newLine());break;
+   case'rvf':syncRecv();return;
+   case'plusone':ui.plusOne=t.checked;return;
+   case'sqDone':{scanCtx.hold=false;scanCtx.cool=Date.now()+3000;render();const m=$('#smsg'),d=$('#sdet');if(m)m.innerHTML='对准下一个产品的条码…';if(d)d.textContent='';return}
+   case'rvdate':ui.recv.lines[+t.dataset.i].exp=t.value;return;
+   case'rvNewBatch':{syncRecv();ui.recv.lines.push({...newLine(),pid:v});const ni=ui.recv.lines.length-1;if(!ui.plusOne)scanCtx.hold=true;render();const m=$('#smsg');if(m)m.innerHTML=(ui.plusOne?lineMsg(prodById(v),ni)+'<div class="mut">已建新批次：接下来扫的会加到这一批。</div>':entryMsg(prodById(v),ni));return}
+   case'rvPick':{syncRecv();const r=ui.recv;
+     if(!r.lines.some(x=>x.pid===v))r.lines=r.lines.filter(x=>x.pid||x.ctn||x.pcs||x.exp).concat([{...newLine(),pid:v}]);
+     else toast('已经在清单里了，直接改数量');
+     ui.rvmsg='';break}
+   case'rvUndo':{const m=S.moves.find(x=>x.id===v);if(!m)return;
+     if(!confirm('撤销这笔进货？\n'+(prodById(m.product_id)?.name||'')+' +'+fmtQty(m.product_id,m.delta)))return;
+     const{error}=await sb.from('stock_moves').insert({id:id(),batch_id:m.batch_id,product_id:m.product_id,delta:-m.delta,type:'adjust',note:'撤销:'+m.id});
+     if(error)throw error;await loadStock();toast('已撤销');break}
+   case'scanChoose':{
+     const pref=getPref();pref[dig(scanCtx.code)]=v+'|'+t.dataset.k;prefMem[dig(scanCtx.code)]=pref[dig(scanCtx.code)];ST.set('infiPref',JSON.stringify(pref));
+     const html=scanCtx.pending(prodById(v),t.dataset.k==='c');const m=$('#smsg')||$('#rv_res');if(m)m.innerHTML=html;return}
+   case'noop':return;
+   case'rvScan':{syncRecv();openScan('扫描产品 → 然后自己填箱数',recvHandler,()=>render(),{plus:true});return}
+   case'rvSave':{
+     syncRecv();const r=ui.recv,today=iso(new Date()),bt=[],mv=[];
+     for(const l of r.lines){
+       if(!l.pid&&!l.ctn&&!l.pcs&&!l.exp)continue;
+       if(!l.pid){alert('有一行没选产品');return}
+       const pr=prodById(l.pid);
+       if(+l.ctn>0&&!pr.perCtn){const n=Math.round(+prompt('「'+pr.name+'」一箱有几件？(只需要填一次)'));if(!(n>=1))return;pr.perCtn=n}
+       const pcs=Math.round((+l.ctn||0)*perCtn(l.pid)+(+l.pcs||0));
+       if(pcs<=0||!l.exp){alert('每一行都要填数量和到期日');return}
+       if(l.exp<today&&!confirm(prodById(l.pid).name+' 的到期日 '+l.exp+' 已经过期，确定入库?'))return;
+       const bid=id();
+       bt.push({id:bid,product_id:l.pid,expiry:l.exp,received_date:r.date||today,po_no:r.po.trim()||null});
+       mv.push({id:id(),batch_id:bid,product_id:l.pid,delta:pcs,type:'receive',ref:r.po.trim()||null,note:r.po.trim()?'PO '+r.po.trim():null});
+     }
+     if(!bt.length){alert('没有可保存的行');return}
+     let e=(await sb.from('batches').insert(bt)).error;if(e)throw e;
+     e=(await sb.from('stock_moves').insert(mv)).error;if(e)throw e;
+     ui.recv=FULL?null:{po:r.po,date:r.date,lines:[]};ui.rvmsg='';await loadStock();toast('已进货 ✅ ('+bt.length+' 项)');break}
+   case'dmgOpen':ui.dmg={pid:'',bid:'',ctn:'',pcs:'',reason:'跌爆',note:''};ui.recv=null;ui.count=false;break;
+   case'dmgClose':ui.dmg=null;break;
+   case'dmf':{syncDmg();if(t.dataset.k==='pid')ui.dmg.bid='';else return;break}
+   case'dmSave':{
+     syncDmg();const d=ui.dmg,b=S.batches.find(x=>x.id===(d.bid||S.batches.filter(y=>y.product_id===d.pid&&y.qty>0).sort((p,q)=>p.expiry<q.expiry?-1:1)[0]?.id));
+     if(!b){alert('请选择产品和批次');return}
+     if(+d.ctn>0&&!prodById(b.product_id).perCtn){alert('这个产品还没设「每箱几件」');return}
+     const pcs=Math.round((+d.ctn||0)*perCtn(b.product_id)+(+d.pcs||0));
+     if(pcs<=0){alert('请填数量');return}
+     if(pcs>b.qty){alert('超过这批现有数量 ('+fmtQty(b.product_id,b.qty)+')');return}
+     const{error}=await sb.from('stock_moves').insert({id:id(),batch_id:b.id,product_id:b.product_id,delta:-pcs,type:d.reason==='过期'?'expired':'damage',note:d.reason+(d.note.trim()?': '+d.note.trim():'')});
+     if(error)throw error;
+     ui.dmg=null;await loadStock();toast('已扣除 '+fmtQty(b.product_id,pcs));break}
+   case'countOpen':ui.count=true;ui.recv=null;ui.dmg=null;break;
+   case'countClose':ui.count=false;break;
+   case'ctSave':{
+     const diffs=[];
+     for(const b of S.batches){
+       const c=$('#ct_'+b.id+'_c')?.value??'',q=$('#ct_'+b.id+'_p')?.value??'';
+       if(c===''&&q==='')continue;
+       if(+c>0&&!prodById(b.product_id).perCtn){alert(prodById(b.product_id).name+' 还没设「每箱几件」');return}
+       const counted=Math.round((+c||0)*perCtn(b.product_id)+(+q||0));
+       if(counted!==b.qty)diffs.push({b,counted,diff:counted-b.qty});
+     }
+     if(!diffs.length){alert('没有差异（或没填任何数量）');ui.count=false;break}
+     const txt=diffs.map(x=>`${prodById(x.b.product_id).name} (到期 ${x.b.expiry}): 系统 ${fmtQty(x.b.product_id,x.b.qty)} → 实际 ${fmtQty(x.b.product_id,x.counted)}`).join('\n');
+     if(!confirm('盘点差异:\n'+txt+'\n\n确认按实际数量修正库存?'))return;
+     const{error}=await sb.from('stock_moves').insert(diffs.map(x=>({id:id(),batch_id:x.b.id,product_id:x.b.product_id,delta:x.diff,type:'adjust',note:'盘点 '+iso(new Date())})));
+     if(error)throw error;
+     ui.count=false;await loadStock();toast('盘点已更新 ✅');break}
+   case'ctScan':{openScan('扫码找产品',c=>withProduct(c,(p)=>{
+       const b=S.batches.filter(x=>x.product_id===p.id).sort((x,y)=>x.expiry<y.expiry?-1:1)[0];
+       const el=b&&$('#ct_'+b.id+'_c');
+       if(!el)return `<span class="badge warn">${esc(p.name)} 没有批次可盘点</span>`;
+       el.scrollIntoView({block:'center'});el.style.outline='3px solid var(--green)';
+       return `<span class="badge ok">✔ ${esc(p.name)}</span> 已定位，关掉扫描窗口后在该产品下填数量`}));return}
+
+   /* --- 产品 / 设置 --- */
+   case'pname':prodById(v).name=t.value.trim()||prodById(v).name;break;
+   case'pcat':prodById(v).cat=t.value;break;
+   case'pmin':prodById(v).minDays=t.value===''?null:+t.value;break;
+   case'pdel':if(confirm('删除这个产品?'))S.products=S.products.filter(p=>p.id!==v);break;
+   case'clrcodes':prodById(v).codes=[];break;
+   case'padd':$('#p_bulk').value.split('\n').map(x=>x.trim()).filter(Boolean).forEach(n=>S.products.push({id:id(),name:n,cat:'其他',codes:[],minDays:null}));break;
+   case'saveSet':Object.keys(TYPES).forEach(k=>S.minDays[k]=+$('#md_'+k).value||0);toast('已保存 ✅');break;
+   case'export':{const b=new Blob([JSON.stringify({products:S.products,stops:S.stops,loads:S.loads,minDays:S.minDays})],{type:'application/json'}),u=document.createElement('a');u.href=URL.createObjectURL(b);u.download='infi-backup-'+iso(new Date())+'.json';u.click();return}
+
+   /* --- 用户管理 (管理员) --- */
+   case'genpw':$('#'+v).value=genPw();return;
+   case'addUser':{
+     const name=$('#u_name').value.trim(),idn=$('#u_id').value.trim(),role=$('#u_role').value,pw=$('#u_pw').value;
+     await adm({action:'create',identifier:idn,name,role,password:pw});
+     ui.note=`${name}（${ROLES[role]}）账号已创建\n登入网址: ${location.origin}${location.pathname}\n登入: ${idn}\n密码: ${pw}\n（登入后可以自己改密码）`;
+     await loadAll();break}
+   case'askreset':ui.reset=v;break;
+   case'cancelreset':ui.reset=null;break;
+   case'doreset':{const pw=$('#rp_pw').value;await adm({action:'resetPassword',user_id:v,password:pw});
+     const u=S.users.find(x=>x.id===v);
+     ui.note=`${u.name} 的密码已重设\n登入: ${u.identifier}\n新密码: ${pw}`;ui.reset=null;break}
+   case'toggleUser':{const u=S.users.find(x=>x.id===v);await adm({action:'setActive',user_id:v,active:!u.active});await loadAll();break}
+   case'delUser':{const u=S.users.find(x=>x.id===v);if(!confirm('删除 '+u.name+'？他的账号会永久删除。'))return;await adm({action:'delete',user_id:v});await loadAll();break}
+   case'urole':{await adm({action:'update',user_id:v,role:t.value});await loadAll();break}
+   case'copynote':navigator.clipboard.writeText(ui.note).then(()=>toast('已复制，去 WhatsApp 贴给他'));return;
+   case'clearnote':ui.note='';break;
+  }
+  }catch(e){
+    if(ui.screen==='app')toast(e.message);else ui.msg=e.message;
+    if(ui.screen==='app'&&['addUser','doreset','toggleUser','delUser','urole'].includes(a))try{await loadAll()}catch{}
+  }
+  render();
+}
+
+/* ---------- 扫描 ---------- */
+let scanCtx={};
+const prefMem={};
+const getPref=()=>{let p={};try{p=JSON.parse(ST.get('infiPref')||'{}')}catch{}return{...p,...prefMem}};
+function withProduct(code,fn){
+  const cand=[];
+  S.products.forEach(p=>{if(hasCode(p.codes,code))cand.push({p,ctn:false});if(hasCode(p.ctnCodes,code))cand.push({p,ctn:true})});
+  if(cand.length===1)return fn(cand[0].p,cand[0].ctn);
+  if(cand.length>1){
+    const pref=getPref();
+    const pc=cand.find(c=>pref[dig(code)]===c.p.id+(c.ctn?'|c':'|u'));
+    if(pc)return fn(pc.p,pc.ctn);
+    scanCtx.pending=fn;scanCtx.code=code;
+    return `<div>这个条码对应多个产品，请选 <span class="mut">(选一次，以后自动记住)</span>：</div>`+cand.slice(0,8).map(c=>`<button class="btn sec" style="width:100%;text-align:left;margin-top:4px" data-act="scanChoose" data-v="${c.p.id}" data-k="${c.ctn?'c':'u'}">${esc(c.p.name)} ${c.ctn?'(整箱)':'(单件)'}</button>`).join('')}
+  scanCtx.code=code;
+  if(!isMgr())return `<span class="badge warn">⚠ 这个条码还没登记 (${esc(code)})</span> 请通知负责人，或手动打勾。`;
+  return `<div>新条码 <b>${esc(code)}</b>，是哪个产品？</div><div class="row"><input id="sq" class="grow" placeholder="输入产品名搜索" data-act="noop"></div><div id="sres" class="mut">先输入产品名</div>
+   <div class="mut" style="margin-top:6px">找到后选「单件」或「整箱」：</div>`}
+const loadScript=u=>new Promise((ok,no)=>{const e=document.createElement('script');e.src=u;e.onload=ok;e.onerror=()=>no(new Error('载入失败 '+u));setTimeout(()=>no(new Error('载入超时 '+u)),15000);document.head.appendChild(e)});
+const ZX_URL='zxing.min.js'; // 放在自己的网站上，不靠外部下载
+let zxMulti=null;
+function zxDecode(canvas){
+  if(!window.ZXing)return null;
+  try{
+    if(!zxMulti){
+      zxMulti=new ZXing.MultiFormatReader();const h=new Map(),F=ZXing.BarcodeFormat;
+      h.set(ZXing.DecodeHintType.TRY_HARDER,true);
+      h.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E,F.CODE_128,F.ITF,F.CODE_39]);
+      zxMulti.setHints(h);
+    }
+    const lum=new ZXing.HTMLCanvasElementLuminanceSource(canvas);
+    return zxMulti.decode(new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum))).getText();
+  }catch(e){return null}
+}
+function zxDecodeRot(canvas){ // 条码横着/竖着拿都能读
+  const r=document.createElement('canvas');r.width=canvas.height;r.height=canvas.width;
+  const x=r.getContext('2d');x.translate(r.width,0);x.rotate(Math.PI/2);x.drawImage(canvas,0,0);return zxDecode(r)}
+const camErr=e=>e.name==='NotAllowedError'?'⚠ 相机权限被拒绝。请到手机「设置 → 浏览器 → 网站设置/权限 → 相机」改成允许，然后刷新页面再试。':
+  e.name==='NotFoundError'?'⚠ 找不到相机。':
+  e.name==='NotReadableError'?'⚠ 相机正被别的程序使用，请先关掉其他用相机的 App。':
+  e.name==='NoMediaDevices'?'⚠ '+e.message:'⚠ 打不开相机 ('+e.name+')。';
+async function openScan(title,onCode,onClose,opts={}){
+  scanCtx.hold=false;scanCtx.cool=0;
+  const m=document.createElement('div');m.id='scanm';
+  m.innerHTML=`<div class="sbox"><div class="row"><b class="grow">${esc(title)}</b><button class="btn sec sm" id="sx">完成</button></div>
+   <div id="sbox_v"><video id="sv" playsinline muted autoplay></video><div class="aim"></div></div><div id="sdet" style="font-weight:700;min-height:20px"></div>
+   ${opts.plus?`<label style="display:flex;gap:8px;align-items:center;margin:4px 0;color:inherit;font-size:14px"><input type="checkbox" id="splus" style="width:20px;height:20px" ${ui.plusOne?'checked':''} data-act="plusone"> 每扫一次 +1 (数量很少时才用；几百箱请自己填)</label>`:''}<div id="smsg" class="mut">正在打开相机…</div>
+   <div id="sdiag" class="mut" style="font-size:12px"></div>
+   <label class="btn sec" style="display:block;text-align:center;margin:8px 0">📷 拍照识别 (现场扫不出来时用)<input id="sphoto" type="file" accept="image/*" capture="environment" hidden></label>
+   <div class="row"><input id="smanual" class="grow" placeholder="或手动输入条码 / 扫描枪" inputmode="numeric"><button class="btn sm" id="sok">确定</button></div></div>`;
+  document.body.appendChild(m);
+  let stopped=false,stream,reader,det,last='',lastT=0,frames=0;
+  const msg=h=>{const e=$('#smsg');if(e)e.innerHTML=h};
+  const diag=t=>{const e=$('#sdiag');if(e)e.textContent=t};
+  const beep=()=>{try{const a=new(window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator();o.frequency.value=1100;o.connect(a.destination);o.start();setTimeout(()=>{o.stop();a.close()},110)}catch{}};
+  const feed=(c,force)=>{c=String(c).trim();if(!c)return;const n=Date.now();
+    if(!force&&(scanCtx.hold||n<(scanCtx.cool||0)))return;
+    if(!force&&c===last&&n-lastT<2500)return;last=c;lastT=n;
+    const d=$('#sdet');if(d)d.textContent='✓ 读到条码: '+c;
+    const vv=$('#sv');if(vv){vv.style.outline='4px solid #2e7d32';setTimeout(()=>{vv.style.outline=''},500)}
+    beep();
+    try{navigator.vibrate?.(60);scanCtx.feed=x=>feed(x,true);scanCtx.code=c;rev++;msg(onCode(c))}
+    catch(e){msg('⚠ 读到条码 '+esc(c)+' 但处理时出错：'+esc(e.message||e));diag('错误: '+String(e.stack||e).slice(0,240))}};
+  scanCtx.feed=x=>feed(x,true);
+  const close=()=>{stopped=true;try{reader?.reset()}catch{}stream?.getTracks().forEach(t=>t.stop());m.remove();onClose?.()};
+  $('#sx').onclick=close;
+  $('#sok').onclick=()=>{feed($('#smanual').value,true);$('#smanual').value=''};
+  $('#smanual').onkeydown=e=>{if(e.key==='Enter')$('#sok').click()};
+  $('#sphoto').onchange=async e=>{
+    const f=e.target.files[0];if(!f)return;msg('识别照片中…');
+    try{
+      let code=null;
+      if(det&&window.createImageBitmap){try{const r=await det.detect(await createImageBitmap(f));code=r[0]?.rawValue}catch{}}
+      if(!code){
+        if(!window.ZXing)await loadScript(ZX_URL);
+        const rd=new ZXing.BrowserMultiFormatReader(),url=URL.createObjectURL(f);
+        code=(await rd.decodeFromImageUrl(url)).getText();
+      }
+      feed(code,true);
+    }catch(err){msg('⚠ 照片里认不出条码。请靠近一点、让条码占满画面、对焦清楚再拍。')}
+    e.target.value='';
+  };
+  const v=$('#sv');
+  try{
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)
+      throw Object.assign(new Error('这个浏览器不支持相机。请直接用 Chrome 或 Safari 打开网址 (不要在 WhatsApp / 微信里打开)。'),{name:'NoMediaDevices'});
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});
+    v.srcObject=stream;await v.play();
+    try{await stream.getVideoTracks()[0].applyConstraints({advanced:[{focusMode:'continuous'}]})}catch{}
+    msg('相机已开。把条码放在画面中间，距离约 10–20 厘米，等它对焦。');
+  }catch(e){msg(camErr(e)+'<br>也可以用下面「拍照识别」或手动输入。');diag(e.name+': '+e.message);return}
+  try{
+    let zxErr='';loadScript(ZX_URL).catch(e=>{zxErr=e.message});            // 识别程序，同时载入
+    if('BarcodeDetector' in window){
+      let fmts=['ean_13','ean_8','upc_a','upc_e','code_128','itf'];
+      try{const sup=await BarcodeDetector.getSupportedFormats();fmts=fmts.filter(f=>sup.includes(f))}catch{}
+      if(fmts.length)det=new BarcodeDetector({formats:fmts});
+    }
+    const cv=document.createElement('canvas'),cx=cv.getContext('2d',{willReadFrequently:true});
+    const grab=crop=>{const W=v.videoWidth,H=v.videoHeight;
+      if(!crop){cv.width=W;cv.height=H;cx.drawImage(v,0,0)}
+      else{const cw=Math.round(W*.84),ch=Math.round(H*.44),sx=Math.round((W-cw)/2),sy=Math.round((H-ch)/2);cv.width=cw;cv.height=ch;cx.drawImage(v,sx,sy,cw,ch,0,0,cw,ch)}
+      return cv};
+    const tick=async()=>{
+      if(stopped)return;
+      if(v.videoWidth){
+        frames++;let code=null;
+        for(const crop of[true,false]){
+          const c=grab(crop);
+          if(det){try{const r=await det.detect(c);if(r[0])code=r[0].rawValue}catch{}}
+          if(!code)code=zxDecode(c);
+          if(code)break;
+        }
+        if(!code&&frames%2===0)code=zxDecodeRot(grab(false));
+        if(code)feed(code);
+        if(frames%5===0)diag('扫描中 '+frames+' 帧 · 画面 '+v.videoWidth+'×'+v.videoHeight+' · 系统识别:'+(det?'有':'无')+' · 识别程序:'+(window.ZXing?'已载入':zxErr?'⚠ '+zxErr:'载入中…'));
+      }
+      setTimeout(tick,150);
+    };
+    tick();
+  }catch(e){diag('扫描程序出错: '+e.name+' '+e.message);msg('⚠ 自动识别没有启动。请用下面「拍照识别」或手动输入条码。')}
+}
+
+/* ---------- 搜索 ---------- */
+const search=q=>{const t=q.toLowerCase().split(/\s+/).filter(Boolean),d=dig(q);
+  return S.products.filter(p=>t.every(w=>p.name.toLowerCase().includes(w))||(d.length>=6&&[...(p.codes||[]),...(p.ctnCodes||[])].some(c=>c.includes(d)))).slice(0,8)};
+document.addEventListener('input',e=>{
+  const id_=e.target.id;
+  if(id_==='sq_ctn'||id_==='sq_pcs'||id_==='sq_exp'){const l=ui.recv?.lines[+e.target.dataset.i];if(l)l[id_==='sq_ctn'?'ctn':id_==='sq_pcs'?'pcs':'exp']=e.target.value;return}
+  if(id_==='rv_q'){const q=e.target.value.trim(),box=$('#rv_res');if(!box)return;
+    if(!q){box.innerHTML='';return}
+    const ms=search(q);
+    box.innerHTML=ms.map(p=>`<button class="btn sec" style="width:100%;text-align:left;margin-top:4px" data-act="rvPick" data-v="${p.id}">${esc(p.name)}</button>`).join('')||'<div class="mut">找不到</div>';
+  }
+  if(id_==='sq'){const box=$('#sres');if(!box)return;const q=e.target.value.trim();
+    const ms=q?search(q):[];
+    box.innerHTML=ms.map(p=>`<div style="margin-top:6px"><b>${esc(p.name)}</b><div class="row"><button class="btn sm" data-act="assign2" data-v="${p.id}" data-k="u">单件</button><button class="btn sm" data-act="assign2" data-v="${p.id}" data-k="c">整箱</button></div></div>`).join('')||'先输入产品名'}
+});
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter'||e.target.id!=='rv_q')return;
+  const v=e.target.value.trim();if(dig(v).length<8)return;
+  e.preventDefault();ui.rvmsg=recvHandler(v);e.target.value='';
+  scanCtx.feed=x=>{ui.rvmsg=recvHandler(x);render()};scanCtx.code=v;render();
+});
+
+/* ---------- 同步更新 (多人同时用) ---------- */
+const isEditing=()=>{
+  if($('#scanm')||ui.recv||ui.dmg||ui.count)return true;
+  const a=document.activeElement;if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))return true;
+  return[...document.querySelectorAll('#app input[id^=rc_],#f_cust,#f_items,#f_addr')].some(i=>i.value)};
+setInterval(async()=>{
+  if(ui.screen!=='app'||document.hidden||isEditing())return;
+  const r0=rev;
+  try{await chain;await loadAll();if(rev===r0&&!isEditing())render()}catch{}
+},15000);
+
+/* ---------- 启动 ---------- */
+async function boot(){
+  if(!window.supabase){ui.screen='boot';ui.msg='连不上网络，请检查网络后刷新。';render();return}
+  sb=supabase.createClient(SB_URL,SB_KEY);
+  sb.auth.onAuthStateChange(ev=>{if(ev==='PASSWORD_RECOVERY'){ui.screen='recovery';ui.msg='';render()}});
+  if(/type=recovery/.test(location.hash)){ui.screen='recovery';render();return}
+  try{
+    const{data:{session}}=await sb.auth.getSession();
+    if(session){await enter()}
+    else{ui.screen='login';
+      try{const r=await adm({action:'status'});ui.needsSetup=!!r.needsSetup}catch{}}
+  }catch(e){ui.screen='login';ui.msg=e.message}
+  render();
+}
+render();
+boot();
+</script>
+</body>
+</html>
