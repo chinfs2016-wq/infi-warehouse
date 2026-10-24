@@ -65,7 +65,7 @@ const CATALOG=[{"id":"ff-bt-2","name":"Farm Fresh Salted Butter 200g x 40","cat"
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
-const VERSION='24Oct-3'; // 每次更新会变，用来确认手机拿到的是最新版
+const VERSION='24Oct-4'; // 每次更新会变，用来确认手机拿到的是最新版
 const SB_URL='https://tpynrnihqoruajddwcnw.supabase.co';
 const SB_KEY='sb_publishable_tc0p1gP3D1GXvD8WqR9K1w_2iSX43Zf'; // 公开的 publishable key，安全设定靠数据库 RLS
 const $=s=>document.querySelector(s);
@@ -82,6 +82,58 @@ const DEF_PRODUCTS=[
  ['Farm Fresh Chocolate Milk 200ml','鲜奶'],['Farm Fresh UHT Milk 1L','UHT'],['Farm Fresh UHT Milk 200ml','UHT'],
  ['Farm Fresh Yogurt','酸奶'],['Farm Fresh Ice Cream','冰淇淋']];
 
+let LANG=ST.get('infiLang')||'zh';
+const tx=(zh,en)=>LANG==='en'?en:zh;
+/*I18N-START*/
+const EN={"的用户可以在登入页自己重设；只有电话的，请在这里帮他「重设密码」，再把新密码":"can reset it themselves on the login page; for phone-only users, tap \"Reset password\" here, then send them the new password","开启后：司机装货时，系统按「先到期先出」自动分配批次并扣库存。请先到「":"When on: as drivers load, the system assigns batches first-expiry-first-out and deducts stock. Please first go to \"","的：我们会寄重设链接给你。用电话号码的：请联系管理员帮你重设。":", we will email you a reset link. If you use a phone number, please ask the admin to reset it for you.","。条码：单件和整箱的条码通常不同，各扫一次。「最少天数」留空":". Barcodes: the single-unit and carton barcodes are usually different, scan each once. Leave \"Min days\" empty","个产品还没设「每箱几件」，请到设置填写，否则箱和件换算不了。":" products have no \"pcs per carton\" yet. Please fill it in under Settings, otherwise cartons and pieces cannot be converted.","照片里认不出条码。请靠近一点、让条码占满画面、对焦清楚再拍。":"Could not read a barcode in the photo. Move closer, let the barcode fill the frame, focus, and shoot again.","数一数实际有多少，填「箱」和「散装件」。没填的批次不会改。":"Count what is actually there and fill in \"Cartons\" and \"Loose pcs\". Batches you leave empty are not changed.","自动识别没有启动。请用下面「拍照识别」或手动输入条码。":"Auto-detect did not start. Please use \"Photo scan\" below or type the barcode.","用电话号码登入的账号，请联系管理员帮你重设密码，他会":"For accounts that log in with a phone number, please ask the admin to reset your password; they will send","送到客人手上时，货品至少要剩几天。不够就会显示红色。":"How many days of shelf life a product must still have when it reaches the customer. If not enough, it shows red.","仓库员工 — 只能进货、点货、看库存、修改库存":"Warehouse staff — receive, count, view and adjust stock only","相机正被别的程序使用，请先关掉其他用相机的":"The camera is being used by another app. Please close other apps that use the camera","每次更新会变，用来确认手机拿到的是最新版":"changes with every update, to confirm the phone has the latest version","只有系统还没有任何用户时才能做这一步。":"This step is only possible while the system has no users yet.","已定位，关掉扫描窗口后在该产品下填数量":"Located. Close the scan window, then enter the quantity under that product","也可以用下面「拍照识别」或手动输入。":"You can also use \"Photo scan\" below or type it in.","寿命期低于客人要求，确定还是交给客人":"shelf life is below the customer's requirement. Deliver to the customer anyway","已建新批次：接下来扫的会加到这一批。":"New batch created: what you scan next is added to this batch.","已注册，重设链接已寄出，请到邮箱查看":"is registered, the reset link has been sent. Please check your email","相机已开。把条码放在画面中间，距离约":"Camera is on. Put the barcode in the middle of the frame, about","设置」开启，司机装货才会自动扣库存。":"Settings\" to enable it, so stock is deducted automatically when drivers load.","一箱几件还没设，保存时会问你一次。":"Pcs per carton is not set yet; you will be asked once when saving.","先把现有库存「收货入库」，然后到「":"First receive the current stock using \"Receive stock\", then go to \"","寿命期不够，不要装，通知仓库换货。":"Not enough shelf life: do not load, tell the warehouse to swap it.","打勾。确认出发后，系统自动扣库存。":"tick it. After you confirm departure, the system deducts stock automatically.","每个产品、每个到期日各填一行。散装":"One row per product per expiry date. Loose","相机」改成允许，然后刷新页面再试。":"Camera\" to Allow, then refresh the page and try again.","这个账号还没有开通，请联系管理员。":"This account has not been activated yet. Please contact the admin.","，并满足每位客人要求的最少剩余天数":", honouring each customer's minimum remaining shelf life","扫描」扫产品条码，然后自己填箱数":"Scan\" to scan a product barcode, then type the number of cartons yourself","这个账号已被停用，请联系管理员。":"This account has been disabled. Please contact the admin.","仓库」把现有库存入库，再开启。":"Warehouse\" and receive the current stock, then enable it.","寿命期不够，请通知仓库或负责人":"Not enough shelf life, please notify the warehouse or the manager","库存清零超过一天的批次自动收起":"batches with zero stock for over a day are hidden automatically","放在自己的网站上，不靠外部下载":"hosted on our own site, no external download","数量很少时才用；几百箱请自己填":"only for small quantities; for hundreds of cartons, type the number","相机权限被拒绝。请到手机「设置":"Camera permission was denied. Please go to your phone \"Settings","管理员 — 还能新增和管理用户":"Admin — can also add and manage users","负责人 — 还能排单、改产品库":"Manager — can also schedule and edit the product list","这个浏览器不支持相机。请直接用":"This browser does not support the camera. Please open the link directly in","连不上网络，请检查网络后刷新。":"Cannot connect to the network. Check your connection and refresh.","以下货品寿命期不够，请换新货":"The following items do not have enough shelf life, please replace them","先完成装货确认才能开始送货。":"Confirm loading first before delivering.","找到后选「单件」或「整箱」：":"When found, choose \"Single\" or \"Carton\":","没有司机的话，到「用户」新增":"if there are no drivers, add them under \"Users\"","进货、报损、修改都会记在这里":"receipts, write-offs and edits are all recorded here","以下货库存不够或寿命期不够":"Stock or shelf life is not enough for these items","已经在清单里了，直接改数量":"Already in the list, just change the quantity","扫描 · 进货 · 填数量":"Scan · Receive · Enter quantity","没有差异（或没填任何数量）":"No differences (or no quantity entered)","请通知负责人，或手动打勾。":"Please tell the manager, or tick it manually.","这个产品还没设「每箱几件」":"This product has no \"pcs per carton\" yet","这个条码对应多个产品，请选":"This barcode matches several products, please choose","司机 — 只能看送货路线":"Driver — can only see delivery routes","失败，不能再重新修改装货":"failed, loading can no longer be changed","库存统一用「件」记账；箱":"stock is recorded in pieces; carton","每一行都要填数量和到期日":"Every row needs a quantity and an expiry date","照下面「拿哪一批」去拿货":"Pick stock following \"which batch to take\" below","（登入后可以自己改密码）":"(you can change the password after logging in)","：仓库没有足够寿命期的货":": the warehouse has no stock with enough shelf life","不在今天的单，不要装！":"is not on today's order, do not load it!","天 · 部分客人不合格":" days · some customers not satisfied","用上面客人类型的设定。":"use the customer-type setting above.","登入用的 电话号码 或":"Phone number or","确认按实际数量修正库存":"Confirm correcting the stock to the actual quantity","请填写名字和正确的电话":"Please enter a name and a valid phone","？他的账号会永久删除。":"? Their account will be permanently deleted.","「每箱几件」一定要填":"\"Pcs per carton\" must be filled in","修改这一批的实际数量":"Edit the actual quantity of this batch","先到「用户」新增司机":"First add a driver under \"Users\"","几百箱不用一箱一箱扫":"no need to scan hundreds of cartons one by one","对准下一个产品的条码":"Aim at the next product's barcode","找不到这个产品的库存":"No stock found for this product","点货可填「期初盘点」":"for counting you can enter \"Opening count\"","请填写客人名字和货品":"Please enter the customer name and items","超过这一批现有的数量":"More than the quantity in this batch","选一次，以后自动记住":"choose once, it is remembered next time","首次使用：创建管理员":"First time: create the admin","填在「散装 件」。":"goes under \"Loose pcs\".","已经过期，确定入库":"has already expired, receive anyway","库存箱和件靠它换算":"stock cartons and pieces are converted with it","点一下看每个到期日":"tap to see each expiry date","点产品看各批到期日":"tap a product to see its batches","识别程序，同时载入":"scanner library, loaded at the same time","请输入正确的电话或":"Please enter a valid phone or","跌爆后剩的、单卖的":"left over after breakage, sold singly","还有货品没打勾卸货":"Some items are not ticked as unloaded","还没设「每箱几件」":"has no \"pcs per carton\" yet","，安全设定靠数据库":", security relies on the database","产品库 — 来自":"Product list — from","例如 卸货时跌落":"e.g. dropped while unloading","创建第一个管理员":"Create the first admin","厘米，等它对焦。":"cm away, and wait for it to focus.","名称 数量 单位":"name quantity unit","库存管理还没启用":"Stock management is not enabled yet","现场扫不出来时用":"use when live scanning does not work","种产品有库存 ·":" products in stock ·","请填要扣掉的数量":"Please enter the quantity to deduct","请选择产品和批次":"Please choose a product and batch","超过这批现有数量":"More than the quantity in this batch","输入到期日。红色":"enter the expiry date. Red","还没有库存。到「":"No stock yet. Go to \"","这个条码还没登记":"This barcode is not registered","这天还没有排单。":"No deliveries scheduled for this day.","这站没有！拿错货":"is not at this stop! Wrong item","进货」点货入库。":"Receive\" to count and receive stock.","」一箱有几件？":"\" - how many pieces per carton?","两次密码不一样":"The two passwords are different","也看看垃圾邮件":"also check your spam folder","但处理时出错：":"but an error occurred while processing:","全部装好，出发":"All loaded, depart","再输入一次密码":"Enter the password again","天 · 不合格":" days · not satisfied","寿命期低于要求":"Shelf life below requirement","已经有站点送达":"A stop has already been delivered","或手动输入条码":"or type the barcode","或：输入产品名":"Or: type a product name","扣掉坏掉的数量":"deduct the damaged quantity","撤销这笔进货？":"Undo this receipt?","收货时间、找谁":"delivery time, who to ask for","整箱，单件条码":"carton, single-unit barcode","最少剩余寿命期":"Minimum remaining shelf life","有一行没选产品":"A row has no product selected","没有可保存的行":"No rows to save","没有批次可盘点":"No batch to count","然后自己填箱数":"then type the number of cartons yourself","确定，扫下一个":"OK, scan the next one","记得输入到期日":"remember to enter the expiry date","输入产品名搜索":"Type a product name to search","这个条码已属于":"This barcode already belongs to","，是哪个产品？":", which product is it?","· 系统识别":"· system scan","· 识别程序":"· scanner library","今天没有排单":"No deliveries today","先输入产品名":"Type a product name first","删除这个产品":"Delete this product","只需要填一次":"only needed once","司机系统 ·":"Driver system ·","启用库存管理":"Enable stock management","天 · 要求":" days · requires","帧 · 画面":" frames · frame size","忘记密码：有":"Forgot password: users with","扫描卸货 ·":"Scan unloading ·","扫描枪直接扫":"scan directly with a scanner gun","扫描程序出错":"Scanner error","批量新增产品":"Add several products","找不到相机。":"Camera not found.","新密码给你。":"the new password to you.","最近库存记录":"Recent stock records","未设每箱件数":"Pcs per carton not set","正在打开相机":"Opening the camera","电话号码 或":"Phone number or","的密码已重设":"'s password has been reset","竖着拿都能读":"held sideways or upright","请先选择司机":"Please choose a driver first","贴上发给司机":"paste it and send to the driver","超市订单填；":"fill for supermarket orders; ","送不到的原因":"Reason it could not be delivered","重新修改装货":"Edit loading again","）账号已创建":") account created","· 收货人":"· received by","不在产品库":"not in product list","保存新密码":"Save new password","先到期先出":"first-expiry-first-out","再输入一次":"Enter again","创建并登入":"Create and log in","复制到明天":"Copy to tomorrow","多人同时用":"multi-user sync","密码已更改":"Password changed","寿命期不够":"Not enough shelf life","已复制，去":"Copied, go to","已进货记录":"Receiving records","微信里打开":"WeChat","或密码不对":"or password is wrong","打不开相机":"Cannot open the camera","扫码找产品":"Scan to find product","换新到期日":"New expiry date","搜索产品名":"Search product name","登入名转换":"login name conversion","盘点已更新":"Stock count updated","看清楚日期":"check the date","系统记录：":"System record:","要求至少剩":"requires at least","订单可留空":"orders can be left empty","设定新密码":"Set new password","识别照片中":"Reading the photo","请输入电话":"Please enter phone","货带回仓库":"goods returned to the warehouse","输入寿命期":"Enter expiry date","还没有记录":"No records yet","送不到退回":"Could not deliver, returned","· 收货":"· received","· 现有":"· in stock","个到期日":" expiry dates","临时密码":"Temporary password","仍然出发":"Depart anyway","仓库员工":"Warehouse staff","仓库注意":"Warehouse attention","仓库缺货":"Warehouse out of stock","仓库装货":"Warehouse loading","保存修改":"Save changes","保存入库":"Save receipt","保存失败":"Save failed","保存进货":"Save receipt","修改数量":"Edit quantity","创建用户":"Create user","删除这站":"Delete this stop","加入排单":"Add to schedule","单件条码":"Single-unit barcode","发给本人":"send to the person","发送失败":"Sending failed","司机排程":"Driver Schedule","同步更新":"sync updates","复制路线":"Copy route","如果这个":"If this","客人不在":"customer not in","密码至少":"Password at least","导出备份":"Export backup","已复制到":"Copied to","库存加回":"stock added back","库存管理":"Stock management","忘记密码":"Forgot password","我的路线":"My route","所有用户":"All users","打开网址":"open the link","扫描产品":"Scan product","扫描卸货":"Scan unloading","扫描装货":"Scan loading","扫码加入":"Scan to add","拍照识别":"Photo scan","拿到期日":"Take the batch expiring","提交盘点":"Submit count","撤销装车":"Undo loading","收货入库":"Receive stock","收货日期":"Received date","散装 件":"Loose pcs","新增用户":"Add user","无法使用":"Unavailable","更改密码":"Change password","最佳食用":"Best before","最少天数":"Min days","条码横着":"barcode sideways","查看司机":"View driver","每扫一次":"Every scan","每箱几件":"Pcs per carton","每行一个":"one per line","每行一项":"one item per line","没有库存":"No stock","没选产品":"no product selected","用户管理":"User management","登入画面":"login screen","登入相关":"login related","登入网址":"Login link","的到期日":"'s expiry date","盘点差异":"Count differences","盘点调整":"Count adjustment","确认扣除":"Confirm deduction","确认重设":"Confirm reset","网站设置":"Site settings","要求寿命":"requires shelf life","请填数量":"Please enter a quantity","读到条码":"Barcode read","贴给仓库":"paste it to the warehouse","跌爆几件":"pieces broken","载入失败":"Load failed","载入超时":"Load timed out","过期报废":"Expired write-off","返回登入":"Back to login","送货日期":"Delivery date","送货站点":"delivery stop","送货路线":"delivery routes","选择产品":"Choose product","选择司机":"Choose driver","逐样拿货":"Pick each item","通知仓库":"Notify warehouse","重新生成":"Regenerate","重设密码":"Reset password","— 剩":"— left","不要在":"do not open in","主渲染":"main render","产品库":"Product list","公开的":"public","冰淇淋":"Ice cream","到期日":"Expiry date","加一行":"Add a row","加载中":"Loading","可不填":"optional","和密码":"and password","哪一批":"Which batch","多扫了":"Scanned too many","完整版":"full version","已保存":"Saved","已修改":"Edited","已停用":"Disabled","已刷新":"Refreshed","已完成":"Done","已扣除":"Deducted","已撤销":"Undone","已确认":"Confirmed","已记住":"Remembered","已载入":"Loaded","已过期":"Expired","已进货":"Received","已送达":"Delivered","快到期":"Expiring soon","打电话":"Call","扫描中":"Scanning","扫描枪":"scanner gun","扫条码":"scan the barcode","找不到":"Not found","收货人":"Received by","数量从":"Quantity from","新密码":"New password","新批次":"New batch","新条码":"New barcode","无库存":"No stock","有货缺":"Items short","未分配":"Unassigned","未送达":"Not delivered","此批剩":"this batch has","没日期":"No date","浏览器":"browser","清条码":"Clear barcodes","的货：":" stock:","站完成":" stops done","管理员":"Admin","箱条码":"Carton barcode","给他。":"to them.","蛋糕店":"Cake shop","负责人":"Manager","贴给他":"paste to them","载入中":"Loading","送不到":"Cannot deliver","业务":"business","事件":"events","云端":"cloud","产品":"Product","仓库":"Warehouse","例如":"e.g.","保存":"Save","修改":"Edit","停用":"Disable","关闭":"Close","其他":"Other","内部":"internal","删除":"Delete","到期":"Expiry","刷新":"Refresh","加入":"Add","单件":"Single","原因":"Reason","取消":"Cancel","号码":"number","司机":"Driver","名字":"Name","启动":"start","启用":"Enable","地址":"Address","备份":"Backup","备注":"Note","复制":"Copy","天，":" days, ","失败":"failed","完成":"Done","实际":"actual","客人":"Customer","密码":"Password","导航":"Navigate","少收":"received less","已扫":"Scanned","库存":"Stock","店名":"Shop name","待送":"Pending","扫描":"Scan","报损":"Write-off","拒收":"refused","按「":"Press \"","排单":"Schedule","搜索":"Search","撤销":"Undo","收货":"Receive","改成":"to","数据":"data","整箱":"Carton","新增":"Add","日期":"Date","最近":"Recent","权限":"permission","条码":"Barcode","查看":"View","用户":"Users","电话":"phone","登入":"Log in","盘点":"Count","目前":"Now","确定":"OK","简易":"simple","类型":"Type","系统":"System","继续":"continue","至少":"at least","装车":"Loading","要出":"Needed","要求":"requires","角色":"Role","设置":"Settings","货品":"Items","跌爆":"Broken","过期":"Expired","进货":"Receive","退出":"Log out","退回":"Returned","送货":"Delivery","酸奶":"Yogurt","错误":"Error","需要":"Need","鲜奶":"Fresh milk","·":"·","—":"—","。":". ","「":"\"","件":" pcs","位":" characters","你":"you","剩":"left","发":"send","天":" days","或":"or","扫":"Scan","无":"none","有":"yes","用":"If you use","站":" stops","笔":"","箱":" ctn","缺":"short","项":" items","（":" (","：":": ","？":"?","格式不对":"format is wrong","角色不对":"Invalid role","请填写名字":"Please enter a name","这个电话":"This phone","已经注册了":"is already registered","已经有管理员了":"There is already an admin","请先登入":"Please log in first","只有管理员可以做这个":"Only the admin can do this","不能停用自己":"You cannot disable yourself","不能删除自己":"You cannot delete yourself","至少要留一个管理员":"At least one admin must remain","电话或":"Phone or","牛油":"Butter","奶粉":"Milk powder","合计":"Total","汇总":"Summary","按到期日明细":"By expiry date","分类":"Category","总件数":"Total pcs","散装(件)":"Loose pcs","剩余天数":"Days left","最早到期":"Earliest expiry","到期日数量":"No. of expiry dates","还没有库存可以导出":"No stock to export yet","已导出":"Exported","导出 Excel":"Export Excel","全部产品总数量":"all products, total quantity","收货入库」":"Receive stock\"","部分客人不合格":"fails for some customers","不合格":"fails the requirement","散装":"Loose","期初盘点":"Opening count"};
+const EN_RULES=[
+  [/箱 ctn/g,'Cartons'],
+  [/\(1 项\)/g,'(1 item)'],
+  [/此批剩 (-?\d+) 天/g,'this batch has $1 days left'],
+  [/要求至少剩 (\d+) 天/g,'requires at least $1 days left'],
+  [/要求寿命≥(\d+) 天/g,'requires shelf life ≥$1 days'],
+  [/要求≥(\d+)/g,'requires ≥$1'],
+  [/剩 (-?\d+) 天/g,'$1 days left'],
+  [/(\d+) 站完成/g,'$1 stops done'],
+  [/\((\d+) 站\)/g,'($1 stops)'],
+  [/\(最近 (\d+) 笔\)/g,'(last $1)'],
+  [/\((\d+) 项\)/g,'($1 items)'],
+  [/(\d+) 天/g,'$1 days']
+];
+const EN_RE=new RegExp(Object.keys(EN).sort((a,b)=>b.length-a.length).map(k=>k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|'),'g');
+const CJK=/[\u4e00-\u9fff\uff00-\uffef]/;
+const T=s=>{
+  if(LANG!=='en'||s==null)return s;
+  let r=String(s);if(!CJK.test(r))return r;
+  for(const[re,to]of EN_RULES)r=r.replace(re,to);
+  let lastEnd=-1,lastEn='';
+  return r.replace(EN_RE,(m,off)=>{
+    const e=EN[m],sp=off===lastEnd&&/[A-Za-z0-9)]$/.test(lastEn)&&/^[A-Za-z0-9(]/.test(e)?' ':'';
+    lastEnd=off+m.length;lastEn=e;return sp+e;
+  }).replace(/ {2,}/g,' ');
+};
+function trNode(n){
+  if(LANG!=='en')return;
+  if(n.nodeType===3){if(CJK.test(n.nodeValue)){const v=T(n.nodeValue);if(v!==n.nodeValue)n.nodeValue=v}return}
+  if(n.nodeType!==1||/^(SCRIPT|STYLE|TEXTAREA)$/.test(n.tagName))return;
+  const w=document.createTreeWalker(n,NodeFilter.SHOW_TEXT),list=[];let x;
+  while(x=w.nextNode())list.push(x);
+  list.forEach(trNode);
+  [n,...n.querySelectorAll('[placeholder],[title]')].forEach(el=>['placeholder','title'].forEach(a=>{
+    const v=el.getAttribute&&el.getAttribute(a);if(v&&CJK.test(v)){const t=T(v);if(t!==v)el.setAttribute(a,t)}}));
+}
+new MutationObserver(ms=>{
+  if(LANG!=='en')return;
+  for(const m of ms){
+    if(m.type==='childList')m.addedNodes.forEach(trNode);
+    else if(m.type==='characterData')trNode(m.target);
+    else{const el=m.target,v=el.getAttribute(m.attributeName);if(v&&CJK.test(v)){const t=T(v);if(t!==v)el.setAttribute(m.attributeName,t)}}
+  }
+}).observe(document.documentElement,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['placeholder','title']});
+{const _al=window.alert.bind(window),_co=window.confirm.bind(window),_pr=window.prompt.bind(window);
+ window.alert=m=>_al(T(m));window.confirm=m=>_co(T(m));window.prompt=(m,d)=>_pr(T(m),d);}
+const applyLang=()=>{document.documentElement.lang=LANG==='en'?'en':'zh';document.title=tx('Infinity 仓库 / 司机','Infinity Warehouse');if(LANG==='en')trNode(document.body)};
+/*I18N-END*/
 let sb=null;
 let S={users:[],products:[],stops:[],loads:{},minDays:{...DEF_MIN},batches:[],moves:[],stockMode:false};
 let me=null;
@@ -250,7 +302,7 @@ function render(){
   $('#hdr h1').textContent=!FULL&&me.role!=='driver'?'📦 Infinity 仓库':'🚚 Infinity 司机排程';
   $('#nav').classList.toggle('hide',tabs.length<2);
   ST.set('infiTab',ui.tab);
-  $('#who').innerHTML=`${esc(me.name)} · ${ROLES[me.role]} <span style="opacity:.7;font-size:11px">v${VERSION}</span> <button class="btn sm sec" data-act="reloadApp">🔄</button> <button class="btn sm sec" data-act="gochpw">🔑</button> <button class="btn sm sec" data-act="logout">退出</button>`;
+  $('#who').innerHTML=`${esc(me.name)} · ${ROLES[me.role]} <span style="opacity:.7;font-size:11px">v${VERSION}</span> <button class="btn sm sec" data-act="lang">${LANG==='zh'?'EN':'中文'}</button> <button class="btn sm sec" data-act="reloadApp">🔄</button> <button class="btn sm sec" data-act="gochpw">🔑</button> <button class="btn sm sec" data-act="logout">退出</button>`;
   $('#nav').innerHTML=tabs.map(([k,t])=>`<button class="${ui.tab===k?'on':''}" data-act="tab" data-v="${k}">${t}</button>`).join('');
   app.innerHTML={plan:vPlan,inv:vInv,stock:()=>FULL?vStock():vWh(),driver:vDriver,users:vUsers,set:vSet}[ui.tab]();
   sync();
@@ -260,7 +312,7 @@ function render(){
 function vAuth(){
   const f=ui.f||{};
   const msg=(ui.msg?`<div class="err">${esc(ui.msg)}</div>`:'')+(ui.ok?`<div class="note">${esc(ui.ok)}</div>`:'');
-  const head='<h1>🚚 Infinity Food Supply</h1><div class="mut" style="text-align:center;margin-bottom:12px">仓库 / 司机系统 · v'+VERSION+'</div>';
+  const head='<div style="text-align:right"><a href="#" data-act="lang">'+(LANG==='zh'?'English':'中文')+'</a></div><h1>🚚 Infinity Food Supply</h1><div class="mut" style="text-align:center;margin-bottom:12px">仓库 / 司机系统 · v'+VERSION+'</div>';
   const V={
    boot:()=>`<div class="login">${head}<p class="mut" style="text-align:center">加载中…</p>${msg}</div>`,
    login:()=>`<div class="login">${head}<div class="card">
@@ -518,6 +570,36 @@ function vWh(){
   </details>`;
 }
 
+/* ---------- 导出 Excel ---------- */
+function buildStockSheets(){
+  const today=iso(new Date());
+  const live=S.batches.filter(b=>b.qty>0);
+  const byP={};live.forEach(b=>(byP[b.product_id]??=[]).push(b));
+  const split=(pid,q)=>{const c=perCtn(pid);return c>1?[Math.floor(q/c),q-Math.floor(q/c)*c]:[0,q]};
+  const sum=[[tx('产品','Product'),tx('分类','Category'),tx('每箱件数','Pcs per carton'),tx('箱','Cartons'),tx('散装(件)','Loose pcs'),tx('总件数','Total pcs'),tx('最早到期','Earliest expiry'),tx('到期日数量','No. of expiry dates')]];
+  let grand=0;
+  S.products.filter(p=>byP[p.id]).forEach(p=>{
+    const l=byP[p.id],tot=l.reduce((n,b)=>n+b.qty,0),[k,r]=split(p.id,tot);grand+=tot;
+    sum.push([p.name,p.cat||'',p.perCtn||'',k,r,tot,l.map(b=>b.expiry).sort()[0],l.length]);
+  });
+  sum.push([]);sum.push([tx('合计','Total'),'','','','',grand,'',live.length]);
+  const det=[[tx('产品','Product'),tx('到期日','Expiry date'),tx('剩余天数','Days left'),tx('箱','Cartons'),tx('散装(件)','Loose pcs'),tx('总件数','Total pcs'),tx('收货日期','Received'),tx('PO / DO','PO / DO')]];
+  S.products.filter(p=>byP[p.id]).forEach(p=>byP[p.id].sort((a,b)=>a.expiry<b.expiry?-1:1).forEach(b=>{
+    const[k,r]=split(p.id,b.qty);det.push([p.name,b.expiry,daysLeft(b.expiry,today),k,r,b.qty,b.received_date,b.po_no||'']);
+  }));
+  return{sum,det,today};
+}
+function stockWorkbook(){
+  const{sum,det,today}=buildStockSheets();
+  const wb=XLSX.utils.book_new();
+  const a=XLSX.utils.aoa_to_sheet(sum),b=XLSX.utils.aoa_to_sheet(det);
+  a['!cols']=[{wch:50},{wch:10},{wch:12},{wch:9},{wch:11},{wch:11},{wch:14},{wch:14}];
+  b['!cols']=[{wch:50},{wch:13},{wch:11},{wch:9},{wch:11},{wch:11},{wch:13},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,a,tx('汇总','Summary'));
+  XLSX.utils.book_append_sheet(wb,b,tx('按到期日明细','By expiry date'));
+  return{wb,name:'stock-'+today+'.xlsx'};
+}
+
 /* ---------- 库存 (查看 / 修改 / 报损) ---------- */
 function batchBlock(p,b,today){
   const dl=daysLeft(b.expiry,today),pc=perCtn(p.id),k=Math.floor(b.qty/pc),r=b.qty-k*pc;
@@ -531,7 +613,7 @@ function batchBlock(p,b,today){
   if(ui.dmgB===b.id)h+=`<div style="padding:10px;background:var(--bg);border-radius:8px;margin-bottom:6px"><b>报损 (扣掉坏掉的数量)</b>
     <div class="row"><div><label>箱 ctn</label><input id="dg_ctn" type="number" min="0" inputmode="numeric" style="width:90px"></div>
     <div><label>散装 件</label><input id="dg_pcs" type="number" min="0" inputmode="numeric" style="width:90px"></div></div>
-    <label>原因</label><select id="dg_reason"><option>跌爆</option><option>过期</option><option>其他</option></select>
+    <label>原因</label><select id="dg_reason"><option value="跌爆">跌爆</option><option value="过期">过期</option><option value="其他">其他</option></select>
     <label>备注 (可不填)</label><input id="dg_note">
     <div class="row" style="margin-top:8px"><button class="btn sm" data-act="invDmgSave" data-v="${b.id}">确认扣除</button><button class="btn sec sm" data-act="invCancel">取消</button></div></div>`;
   return h;
@@ -559,6 +641,7 @@ function vInv(){
     <b style="color:var(--${m.delta>0?'green':'red'})">${m.delta>0?'+':'−'}${fmtQty(m.product_id,Math.abs(m.delta))}</b>${m.note&&!/^\d{4}-/.test(m.note)&&!/^撤销:/.test(m.note)?` <span class="mut">${esc(m.note)}</span>`:''}</div></div>`).join('');
   return `
   <div class="row"><div class="grow"><b>${kinds}</b> 种产品有库存 · <b>${live.length}</b> 个到期日</div><button class="btn sec sm" data-act="invRefresh">🔄 刷新</button></div>
+  <button class="btn" style="width:100%;margin-top:8px" data-act="exportXlsx">⬇ 导出 Excel (全部产品总数量)</button>
   <input id="inv_q" style="margin-top:8px" placeholder="搜索产品名" value="${esc(ui.invq||'')}" autocomplete="off">
   <div id="inv_list">${invList()}</div>
   <details class="card" style="margin-top:16px"><summary><b>📋 最近库存记录</b> <span class="mut">(进货、报损、修改都会记在这里)</span></summary>${log||'<div class="mut">还没有记录</div>'}</details>`;
@@ -617,7 +700,7 @@ function vDmg(){const d=ui.dmg;
    <label>产品</label><select id="dm_pid" data-act="dmf" data-k="pid"><option value="">选择产品</option>${ps.map(p=>`<option value="${p.id}" ${d.pid===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
    <label>哪一批</label><select id="dm_bid" data-act="dmf" data-k="bid">${bs.map(b=>`<option value="${b.id}" ${(d.bid||bs[0].id)===b.id?'selected':''}>到期 ${b.expiry} · 现有 ${fmtQty(b.product_id,b.qty)}</option>`).join('')}</select>
    <div class="row"><div class="grow"><label>箱 ctn</label><input id="dm_ctn" type="number" min="0" inputmode="numeric" data-act="dmf" data-k="ctn" value="${esc(d.ctn)}"></div><div class="grow"><label>散装 件 (跌爆几件)</label><input id="dm_pcs" type="number" min="0" inputmode="numeric" data-act="dmf" data-k="pcs" value="${esc(d.pcs)}"></div></div>
-   <label>原因</label><select id="dm_reason" data-act="dmf" data-k="reason">${['跌爆','过期','其他'].map(x=>`<option ${d.reason===x?'selected':''}>${x}</option>`).join('')}</select>
+   <label>原因</label><select id="dm_reason" data-act="dmf" data-k="reason">${['跌爆','过期','其他'].map(x=>`<option value="${x}" ${d.reason===x?'selected':''}>${x}</option>`).join('')}</select>
    <label>备注</label><input id="dm_note" data-act="dmf" data-k="note" value="${esc(d.note)}" placeholder="例如 卸货时跌落">
    <div class="row" style="margin-top:12px"><button class="btn grow" data-act="dmSave">确认扣除</button><button class="btn sec" data-act="dmgClose">取消</button></div></div>`}
 function vCount(){
@@ -641,7 +724,7 @@ function vSet(){
   <h2>产品库 (Farm Fresh)</h2>
   <div class="card"><div class="mut">「每箱几件」一定要填 (库存箱和件靠它换算)。条码：单件和整箱的条码通常不同，各扫一次。「最少天数」留空 = 用上面客人类型的设定。</div>
    ${S.products.map(p=>`<div class="item" style="flex-wrap:wrap"><input class="grow" style="min-width:60%" value="${esc(p.name)}" data-act="pname" data-v="${p.id}">
-     <select style="width:auto" data-act="pcat" data-v="${p.id}">${['鲜奶','UHT','酸奶','冰淇淋','其他'].map(c=>`<option ${p.cat===c?'selected':''}>${c}</option>`).join('')}</select>
+     <select style="width:auto" data-act="pcat" data-v="${p.id}">${['鲜奶','UHT','酸奶','冰淇淋','其他'].map(c=>`<option value="${c}" ${p.cat===c?'selected':''}>${c}</option>`).join('')}</select>
      <input type="number" min="1" placeholder="每箱几件" style="width:95px" value="${p.perCtn??''}" data-act="pper" data-v="${p.id}">
      <input type="number" min="0" placeholder="最少天数" style="width:90px" value="${p.minDays??''}" data-act="pmin" data-v="${p.id}">
      <button class="btn sec sm" data-act="scanBind" data-v="${p.id}" data-k="u">📷 单件条码 (${p.codes.length})</button>
@@ -660,8 +743,8 @@ let rev=0;
 document.addEventListener('click',onEv);
 document.addEventListener('change',onEv);
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.closest?.('[data-enter]'))document.querySelector('[data-primary]')?.click()});
-const MGR_ONLY=new Set(['saveStop','cancelEdit','edit','del','dup','up','down','pick','pname','pcat','pmin','pdel','clrcodes','padd','scanBind','saveSet','copyRoute','export','rvdate','plusone','sqDone','invRefresh','invEdit','invDmg','invCancel','invEditSave','invDmgSave','rvNewBatch','rvPick','rvUndo','scanChoose','noop','assign2','pper','stockmode','openP','recvOpen','rvClose','rvAdd','rvDel','rvf','rvScan','rvSave','dmgOpen','dmgClose','dmf','dmSave','countOpen','countClose','ctSave','ctScan']);
-const WH_OK=new Set(['openP','rvClose','rvAdd','rvDel','rvf','rvScan','rvSave','rvdate','plusone','sqDone','rvNewBatch','rvPick','rvUndo','scanChoose','noop','assign2','invRefresh','invEdit','invDmg','invCancel','invEditSave','invDmgSave','recvOpen']);
+const MGR_ONLY=new Set(['saveStop','cancelEdit','edit','del','dup','up','down','pick','pname','pcat','pmin','pdel','clrcodes','padd','scanBind','saveSet','copyRoute','export','rvdate','plusone','sqDone','exportXlsx','invRefresh','invEdit','invDmg','invCancel','invEditSave','invDmgSave','rvNewBatch','rvPick','rvUndo','scanChoose','noop','assign2','pper','stockmode','openP','recvOpen','rvClose','rvAdd','rvDel','rvf','rvScan','rvSave','dmgOpen','dmgClose','dmf','dmSave','countOpen','countClose','ctSave','ctScan']);
+const WH_OK=new Set(['exportXlsx','openP','rvClose','rvAdd','rvDel','rvf','rvScan','rvSave','rvdate','plusone','sqDone','rvNewBatch','rvPick','rvUndo','scanChoose','noop','assign2','invRefresh','invEdit','invDmg','invCancel','invEditSave','invDmgSave','recvOpen']);
 const ADMIN_ONLY=new Set(['addUser','askreset','doreset','toggleUser','delUser','urole','genpw','cancelreset','copynote','clearnote']);
 async function onEv(ev){
   const t=ev.target.closest('[data-act]');if(!t)return;
@@ -679,6 +762,7 @@ async function onEv(ev){
   try{
   switch(a){
    /* --- 登入相关 --- */
+   case'lang':LANG=LANG==='zh'?'en':'zh';ST.set('infiLang',LANG);applyLang();break;
    case'reloadApp':location.replace(location.pathname+'?v='+Date.now()+(FULL?'&full=1':''));return;
    case'gologin':grab();ui.screen='login';ui.msg='';ui.ok='';break;
    case'goforgot':grab();ui.screen='forgot';ui.msg='';ui.ok='';break;
@@ -741,7 +825,7 @@ async function onEv(ev){
    case'copyRoute':{
      const ss=dayStops(ui.date,v);
      const txt=`🚚 *${uname(v)}* 送货路线 ${ui.date}\n\n`+ss.map((s,i)=>`*${i+1}. ${s.customer}* (${TYPES[s.type]})${s.po?'\nPO: '+s.po:''}\n📍 ${s.address}\n${s.items.map(x=>'• '+x.name+' '+x.qty+x.unit).join('\n')}${s.note?'\n📝 '+s.note:''}${s.phone?'\n📞 '+s.phone:''}`).join('\n\n');
-     navigator.clipboard.writeText(txt).then(()=>alert('已复制，去 WhatsApp 贴上发给司机'));return}
+     navigator.clipboard.writeText(T(txt)).then(()=>alert('已复制，去 WhatsApp 贴上发给司机'));return}
    case'pick':{const ta=$('#f_items'),p=prodById($('#f_pick').value);ta.value+=(ta.value&&!ta.value.endsWith('\n')?'\n':'')+p.name+' 1 ctn';return}
 
    /* --- 司机 --- */
@@ -780,7 +864,7 @@ async function onEv(ev){
        stops.forEach(s=>s.items.forEach(i=>{const b=L().batch[ik(i)];const c=check(b?.exp,s,pidOf(i));if(c.st==='bad')bad.push(`• ${i.name} — 剩 ${c.dl} 天，${s.customer} 要求≥${c.need} 天`)}));
        txt=`⚠️ 仓库注意 (${uname(ui.driver)} ${ui.date})\n以下货品寿命期不够，请换新货:\n`+[...new Set(bad)].join('\n');
      }
-     navigator.clipboard.writeText(txt).then(()=>alert('已复制，去 WhatsApp 贴给仓库'));return}
+     navigator.clipboard.writeText(T(txt)).then(()=>alert('已复制，去 WhatsApp 贴给仓库'));return}
    case'open':ui.open=ui.open===v?null:v;break;
    case'unload':{stop().items[+t.dataset.j].unloaded=t.checked;break}
    case'deliver':{
@@ -837,6 +921,11 @@ async function onEv(ev){
    case'rvDel':syncRecv();ui.recv.lines.splice(+v,1);if(!ui.recv.lines.length)ui.recv.lines.push(newLine());break;
    case'rvf':syncRecv();return;
    case'invRefresh':await loadStock();toast('已刷新');break;
+   case'exportXlsx':{
+     await loadStock();
+     if(!window.XLSX)await loadScript('xlsx.mini.min.js');
+     if(!S.batches.some(b=>b.qty>0)){alert('还没有库存可以导出');return}
+     const{wb,name}=stockWorkbook();XLSX.writeFile(wb,name);toast('已导出 '+name);return}
    case'invEdit':ui.editB=v;ui.dmgB=null;break;
    case'invDmg':ui.dmgB=v;ui.editB=null;break;
    case'invCancel':ui.editB=null;ui.dmgB=null;break;
@@ -958,7 +1047,7 @@ async function onEv(ev){
    case'toggleUser':{const u=S.users.find(x=>x.id===v);await adm({action:'setActive',user_id:v,active:!u.active});await loadAll();break}
    case'delUser':{const u=S.users.find(x=>x.id===v);if(!confirm('删除 '+u.name+'？他的账号会永久删除。'))return;await adm({action:'delete',user_id:v});await loadAll();break}
    case'urole':{await adm({action:'update',user_id:v,role:t.value});await loadAll();break}
-   case'copynote':navigator.clipboard.writeText(ui.note).then(()=>toast('已复制，去 WhatsApp 贴给他'));return;
+   case'copynote':navigator.clipboard.writeText(T(ui.note)).then(()=>toast('已复制，去 WhatsApp 贴给他'));return;
    case'clearnote':ui.note='';break;
   }
   }catch(e){
@@ -1139,6 +1228,7 @@ async function boot(){
   }catch(e){ui.screen='login';ui.msg=e.message}
   render();
 }
+applyLang();
 render();
 boot();
 </script>
