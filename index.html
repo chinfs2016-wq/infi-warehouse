@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <title>Infinity 司机排程</title>
 <style>
 :root{--bg:#f4f6f3;--card:#fff;--ink:#1f2a1f;--mut:#6b776b;--green:#2e7d32;--gl:#e6f4e7;--red:#c62828;--rl:#fdeaea;--org:#e65100;--ol:#fff1e0;--line:#dde3dc}
@@ -64,6 +65,7 @@ const CATALOG=[{"id":"ff-bt-2","name":"Farm Fresh Salted Butter 200g x 40","cat"
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
+const VERSION='24Oct-3'; // 每次更新会变，用来确认手机拿到的是最新版
 const SB_URL='https://tpynrnihqoruajddwcnw.supabase.co';
 const SB_KEY='sb_publishable_tc0p1gP3D1GXvD8WqR9K1w_2iSX43Zf'; // 公开的 publishable key，安全设定靠数据库 RLS
 const $=s=>document.querySelector(s);
@@ -248,7 +250,7 @@ function render(){
   $('#hdr h1').textContent=!FULL&&me.role!=='driver'?'📦 Infinity 仓库':'🚚 Infinity 司机排程';
   $('#nav').classList.toggle('hide',tabs.length<2);
   ST.set('infiTab',ui.tab);
-  $('#who').innerHTML=`${esc(me.name)} · ${ROLES[me.role]} <button class="btn sm sec" data-act="gochpw">🔑</button> <button class="btn sm sec" data-act="logout">退出</button>`;
+  $('#who').innerHTML=`${esc(me.name)} · ${ROLES[me.role]} <span style="opacity:.7;font-size:11px">v${VERSION}</span> <button class="btn sm sec" data-act="reloadApp">🔄</button> <button class="btn sm sec" data-act="gochpw">🔑</button> <button class="btn sm sec" data-act="logout">退出</button>`;
   $('#nav').innerHTML=tabs.map(([k,t])=>`<button class="${ui.tab===k?'on':''}" data-act="tab" data-v="${k}">${t}</button>`).join('');
   app.innerHTML={plan:vPlan,inv:vInv,stock:()=>FULL?vStock():vWh(),driver:vDriver,users:vUsers,set:vSet}[ui.tab]();
   sync();
@@ -258,7 +260,7 @@ function render(){
 function vAuth(){
   const f=ui.f||{};
   const msg=(ui.msg?`<div class="err">${esc(ui.msg)}</div>`:'')+(ui.ok?`<div class="note">${esc(ui.ok)}</div>`:'');
-  const head='<h1>🚚 Infinity Food Supply</h1><div class="mut" style="text-align:center;margin-bottom:12px">司机排程系统</div>';
+  const head='<h1>🚚 Infinity Food Supply</h1><div class="mut" style="text-align:center;margin-bottom:12px">仓库 / 司机系统 · v'+VERSION+'</div>';
   const V={
    boot:()=>`<div class="login">${head}<p class="mut" style="text-align:center">加载中…</p>${msg}</div>`,
    login:()=>`<div class="login">${head}<div class="card">
@@ -677,6 +679,7 @@ async function onEv(ev){
   try{
   switch(a){
    /* --- 登入相关 --- */
+   case'reloadApp':location.replace(location.pathname+'?v='+Date.now()+(FULL?'&full=1':''));return;
    case'gologin':grab();ui.screen='login';ui.msg='';ui.ok='';break;
    case'goforgot':grab();ui.screen='forgot';ui.msg='';ui.ok='';break;
    case'gosetup':grab();ui.screen='setup';ui.msg='';ui.ok='';break;
