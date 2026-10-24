@@ -102,7 +102,7 @@ const TABS=FULL?{
   admin:[['plan','📋 排单'],['stock','📦 仓库'],['driver','🚚 司机'],['users','👥 用户'],['set','⚙️ 设置']],
   manager:[['plan','📋 排单'],['stock','📦 仓库'],['driver','🚚 司机'],['set','⚙️ 设置']],
   driver:[['driver','🚚 我的路线']]}:{
-  admin:[['stock','📦 进货 / 点货']],manager:[['stock','📦 进货 / 点货']],driver:[['driver','🚚 我的路线']]};
+  admin:[['stock','📥 进货'],['inv','📋 库存'],['users','👥 用户']],manager:[['stock','📥 进货'],['inv','📋 库存']],driver:[['driver','🚚 我的路线']]};
 
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.remove('hide');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.add('hide'),5000)}
 
@@ -249,7 +249,7 @@ function render(){
   ST.set('infiTab',ui.tab);
   $('#who').innerHTML=`${esc(me.name)} · ${ROLES[me.role]} <button class="btn sm sec" data-act="gochpw">🔑</button> <button class="btn sm sec" data-act="logout">退出</button>`;
   $('#nav').innerHTML=tabs.map(([k,t])=>`<button class="${ui.tab===k?'on':''}" data-act="tab" data-v="${k}">${t}</button>`).join('');
-  app.innerHTML={plan:vPlan,stock:()=>FULL?vStock():vWh(),driver:vDriver,users:vUsers,set:vSet}[ui.tab]();
+  app.innerHTML={plan:vPlan,inv:vInv,stock:()=>FULL?vStock():vWh(),driver:vDriver,users:vUsers,set:vSet}[ui.tab]();
   sync();
 }
 
@@ -452,7 +452,7 @@ function vUsers(){
   <details class="card"><summary><b>➕ 新增用户</b></summary>
    <label>名字</label><input id="u_name">
    <label>登入用的 电话号码 或 Email</label><input id="u_id" placeholder="012-3456789 / name@email.com">
-   <label>角色</label><select id="u_role"><option value="driver">司机</option><option value="manager">负责人</option><option value="admin">管理员</option></select>
+   <label>角色</label><select id="u_role"><option value="manager">负责人 — 可进货、点货、看库存、修改</option><option value="driver">司机 — 只能看送货路线</option><option value="admin">管理员 — 还能新增和管理用户</option></select>
    <label>临时密码 (至少 6 位)</label><div class="row"><input id="u_pw" class="grow" value="${genPw()}"><button class="btn sec sm" data-act="genpw" data-v="u_pw">重新生成</button></div>
    <button class="btn" style="width:100%;margin-top:12px" data-act="addUser">创建用户</button>
   </details>
@@ -513,6 +513,52 @@ function vWh(){
      <b style="color:var(--green)">+${fmtQty(m.product_id,m.delta)}</b>${m.ref?` <span class="mut">${esc(m.ref)}</span>`:''}</div>
      ${undone.has(m.id)?'<span class="badge gray">已撤销</span>':`<button class="btn sec sm" data-act="rvUndo" data-v="${m.id}">撤销</button>`}</div>`).join('')||'<div class="mut">还没有记录</div>'}
   </details>`;
+}
+
+/* ---------- 库存 (查看 / 修改 / 报损) ---------- */
+function batchBlock(p,b,today){
+  const dl=daysLeft(b.expiry,today),pc=perCtn(p.id),k=Math.floor(b.qty/pc),r=b.qty-k*pc;
+  let h=`<div class="item" style="flex-wrap:wrap"><div class="nm">到期 <b>${b.expiry}</b> <span class="badge ${dlCls(dl)}">${dl<0?'已过期':'剩 '+dl+' 天'}</span>
+    <div class="mut">${fmtQty(p.id,b.qty)} · 收货 ${b.received_date}${b.po_no?' · '+esc(b.po_no):''}</div></div>
+    <button class="btn sec sm" data-act="invEdit" data-v="${b.id}">修改数量</button><button class="btn sec sm" data-act="invDmg" data-v="${b.id}">报损</button></div>`;
+  if(ui.editB===b.id)h+=`<div style="padding:10px;background:var(--bg);border-radius:8px;margin-bottom:6px"><b>修改这一批的实际数量</b>
+    <div class="row"><div><label>箱 ctn</label><input id="eb_ctn" type="number" min="0" inputmode="numeric" style="width:90px" value="${k}"></div>
+    <div><label>散装 件</label><input id="eb_pcs" type="number" min="0" inputmode="numeric" style="width:90px" value="${r}"></div></div>
+    <div class="row" style="margin-top:8px"><button class="btn sm" data-act="invEditSave" data-v="${b.id}">保存</button><button class="btn sec sm" data-act="invCancel">取消</button></div></div>`;
+  if(ui.dmgB===b.id)h+=`<div style="padding:10px;background:var(--bg);border-radius:8px;margin-bottom:6px"><b>报损 (扣掉坏掉的数量)</b>
+    <div class="row"><div><label>箱 ctn</label><input id="dg_ctn" type="number" min="0" inputmode="numeric" style="width:90px"></div>
+    <div><label>散装 件</label><input id="dg_pcs" type="number" min="0" inputmode="numeric" style="width:90px"></div></div>
+    <label>原因</label><select id="dg_reason"><option>跌爆</option><option>过期</option><option>其他</option></select>
+    <label>备注 (可不填)</label><input id="dg_note">
+    <div class="row" style="margin-top:8px"><button class="btn sm" data-act="invDmgSave" data-v="${b.id}">确认扣除</button><button class="btn sec sm" data-act="invCancel">取消</button></div></div>`;
+  return h;
+}
+function invList(){
+  const today=iso(new Date());
+  const t=(ui.invq||'').toLowerCase().split(/\s+/).filter(Boolean);
+  const byP={};S.batches.filter(b=>b.qty>0).forEach(b=>(byP[b.product_id]??=[]).push(b));
+  const ps=S.products.filter(p=>byP[p.id]&&t.every(w=>p.name.toLowerCase().includes(w)));
+  if(!ps.length)return `<p class="mut" style="text-align:center">${t.length?'找不到这个产品的库存':'还没有库存。到「📥 进货」点货入库。'}</p>`;
+  return ps.map(p=>{
+    const bs=byP[p.id].sort((a,b)=>a.expiry<b.expiry?-1:1);
+    const tot=bs.reduce((n,b)=>n+b.qty,0);
+    const ex=bs.filter(b=>daysLeft(b.expiry,today)<0).reduce((n,b)=>n+b.qty,0);
+    const near=bs.filter(b=>{const d=daysLeft(b.expiry,today);return d>=0&&d<=2}).reduce((n,b)=>n+b.qty,0);
+    const open=ui.openP===p.id||t.length&&ps.length===1;
+    return `<div class="card"><div class="row" data-act="openP" data-v="${p.id}"><b class="grow">${esc(p.name)}</b><b>${fmtQty(p.id,tot)}</b></div>
+     <div class="mut">${bs.length} 个到期日 ${ex?`<span class="badge bad">已过期 ${fmtQty(p.id,ex)}</span>`:''} ${near?`<span class="badge warn">快到期 ${fmtQty(p.id,near)}</span>`:''}</div>
+     ${open?bs.map(b=>batchBlock(p,b,today)).join(''):'<div class="mut" style="font-size:12px">点一下看每个到期日</div>'}</div>`}).join('');
+}
+function vInv(){
+  const live=S.batches.filter(b=>b.qty>0);
+  const kinds=new Set(live.map(b=>b.product_id)).size;
+  const log=S.moves.slice(0,40).map(m=>`<div class="item"><div class="nm"><span class="mut">${new Date(m.created_at).toLocaleString('en-GB',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</span> ${TL[m.type]||m.type} · ${esc(prodById(m.product_id)?.name||m.product_id)}
+    <b style="color:var(--${m.delta>0?'green':'red'})">${m.delta>0?'+':'−'}${fmtQty(m.product_id,Math.abs(m.delta))}</b>${m.note&&!/^\d{4}-/.test(m.note)&&!/^撤销:/.test(m.note)?` <span class="mut">${esc(m.note)}</span>`:''}</div></div>`).join('');
+  return `
+  <div class="row"><div class="grow"><b>${kinds}</b> 种产品有库存 · <b>${live.length}</b> 个到期日</div><button class="btn sec sm" data-act="invRefresh">🔄 刷新</button></div>
+  <input id="inv_q" style="margin-top:8px" placeholder="搜索产品名" value="${esc(ui.invq||'')}" autocomplete="off">
+  <div id="inv_list">${invList()}</div>
+  <details class="card" style="margin-top:16px"><summary><b>📋 最近库存记录</b> <span class="mut">(进货、报损、修改都会记在这里)</span></summary>${log||'<div class="mut">还没有记录</div>'}</details>`;
 }
 
 /* ---------- 仓库 (完整版) ---------- */
@@ -611,7 +657,7 @@ let rev=0;
 document.addEventListener('click',onEv);
 document.addEventListener('change',onEv);
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.closest?.('[data-enter]'))document.querySelector('[data-primary]')?.click()});
-const MGR_ONLY=new Set(['saveStop','cancelEdit','edit','del','dup','up','down','pick','pname','pcat','pmin','pdel','clrcodes','padd','scanBind','saveSet','copyRoute','export','rvdate','plusone','sqDone','rvNewBatch','rvPick','rvUndo','scanChoose','noop','assign2','pper','stockmode','openP','recvOpen','rvClose','rvAdd','rvDel','rvf','rvScan','rvSave','dmgOpen','dmgClose','dmf','dmSave','countOpen','countClose','ctSave','ctScan']);
+const MGR_ONLY=new Set(['saveStop','cancelEdit','edit','del','dup','up','down','pick','pname','pcat','pmin','pdel','clrcodes','padd','scanBind','saveSet','copyRoute','export','rvdate','plusone','sqDone','invRefresh','invEdit','invDmg','invCancel','invEditSave','invDmgSave','rvNewBatch','rvPick','rvUndo','scanChoose','noop','assign2','pper','stockmode','openP','recvOpen','rvClose','rvAdd','rvDel','rvf','rvScan','rvSave','dmgOpen','dmgClose','dmf','dmSave','countOpen','countClose','ctSave','ctScan']);
 const ADMIN_ONLY=new Set(['addUser','askreset','doreset','toggleUser','delUser','urole','genpw','cancelreset','copynote','clearnote']);
 async function onEv(ev){
   const t=ev.target.closest('[data-act]');if(!t)return;
@@ -667,7 +713,7 @@ async function onEv(ev){
    case'logout':await chain;await sb.auth.signOut();me=null;S={users:[],products:[],stops:[],loads:{},minDays:{...DEF_MIN},batches:[],moves:[],stockMode:false};ui.screen='login';ui.msg='';ui.ok='';ui.f={};break;
 
    /* --- 导航 --- */
-   case'tab':ui.tab=v;break;
+   case'tab':ui.tab=v;if(ui.tab==='inv'||ui.tab==='stock'){try{await loadStock()}catch{}}break;
    case'date':ui.date=t.value||ui.date;break;
    case'drv':ui.driver=t.value;ST.set('infiDriver',t.value);break;
 
@@ -785,6 +831,31 @@ async function onEv(ev){
    case'rvAdd':syncRecv();ui.recv.lines.push(newLine());break;
    case'rvDel':syncRecv();ui.recv.lines.splice(+v,1);if(!ui.recv.lines.length)ui.recv.lines.push(newLine());break;
    case'rvf':syncRecv();return;
+   case'invRefresh':await loadStock();toast('已刷新');break;
+   case'invEdit':ui.editB=v;ui.dmgB=null;break;
+   case'invDmg':ui.dmgB=v;ui.editB=null;break;
+   case'invCancel':ui.editB=null;ui.dmgB=null;break;
+   case'invEditSave':{
+     const b=S.batches.find(x=>x.id===v),pr=prodById(b.product_id);
+     const c=+$('#eb_ctn').value||0,q=+$('#eb_pcs').value||0;
+     if(c>0&&!pr.perCtn){const n=Math.round(+prompt('「'+pr.name+'」一箱有几件？(只需要填一次)'));if(!(n>=1))return;pr.perCtn=n}
+     const nq=Math.round(c*perCtn(b.product_id)+q);
+     if(nq<0)return;const diff=nq-b.qty;
+     if(!diff){ui.editB=null;break}
+     if(!confirm(pr.name+' (到期 '+b.expiry+')\n数量从 '+fmtQty(b.product_id,b.qty)+' 改成 '+fmtQty(b.product_id,nq)+' ？'))return;
+     const{error}=await sb.from('stock_moves').insert({id:id(),batch_id:b.id,product_id:b.product_id,delta:diff,type:'adjust',note:'修改数量'});
+     if(error)throw error;
+     ui.editB=null;await loadStock();toast('已修改 ✅');break}
+   case'invDmgSave':{
+     const b=S.batches.find(x=>x.id===v),pr=prodById(b.product_id);
+     const c=+$('#dg_ctn').value||0,q=+$('#dg_pcs').value||0,why=$('#dg_reason').value,note=$('#dg_note').value.trim();
+     if(c>0&&!pr.perCtn){const n=Math.round(+prompt('「'+pr.name+'」一箱有几件？(只需要填一次)'));if(!(n>=1))return;pr.perCtn=n}
+     const pcs=Math.round(c*perCtn(b.product_id)+q);
+     if(pcs<=0){alert('请填要扣掉的数量');return}
+     if(pcs>b.qty){alert('超过这一批现有的数量 ('+fmtQty(b.product_id,b.qty)+')');return}
+     const{error}=await sb.from('stock_moves').insert({id:id(),batch_id:b.id,product_id:b.product_id,delta:-pcs,type:why==='过期'?'expired':'damage',note:why+(note?': '+note:'')});
+     if(error)throw error;
+     ui.dmgB=null;await loadStock();toast('已扣除 '+fmtQty(b.product_id,pcs));break}
    case'plusone':ui.plusOne=t.checked;return;
    case'sqDone':{scanCtx.hold=false;scanCtx.cool=Date.now()+3000;render();const m=$('#smsg'),d=$('#sdet');if(m)m.innerHTML='对准下一个产品的条码…';if(d)d.textContent='';return}
    case'rvdate':ui.recv.lines[+t.dataset.i].exp=t.value;return;
@@ -1021,6 +1092,7 @@ const search=q=>{const t=q.toLowerCase().split(/\s+/).filter(Boolean),d=dig(q);
 document.addEventListener('input',e=>{
   const id_=e.target.id;
   if(id_==='sq_ctn'||id_==='sq_pcs'||id_==='sq_exp'){const l=ui.recv?.lines[+e.target.dataset.i];if(l)l[id_==='sq_ctn'?'ctn':id_==='sq_pcs'?'pcs':'exp']=e.target.value;return}
+  if(id_==='inv_q'){ui.invq=e.target.value;const box=$('#inv_list');if(box)box.innerHTML=invList();return}
   if(id_==='rv_q'){const q=e.target.value.trim(),box=$('#rv_res');if(!box)return;
     if(!q){box.innerHTML='';return}
     const ms=search(q);
