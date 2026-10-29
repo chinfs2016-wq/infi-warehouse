@@ -68,7 +68,7 @@ const CATALOG=[{"id":"ff-bt-2","name":"Farm Fresh Salted Butter 200g x 40","cat"
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
-const VERSION='24Oct-16'; // 每次更新会变，用来确认手机拿到的是最新版
+const VERSION='24Oct-17'; // 每次更新会变，用来确认手机拿到的是最新版
 const SB_URL='https://tpynrnihqoruajddwcnw.supabase.co';
 const SB_KEY='sb_publishable_tc0p1gP3D1GXvD8WqR9K1w_2iSX43Zf'; // 公开的 publishable key，安全设定靠数据库 RLS
 const $=s=>document.querySelector(s);
@@ -600,8 +600,8 @@ function backupWorkbook(b){
   T.stock_moves.forEach(m=>{const x=bm.get(m.batch_id)||{};recs.push([fdt(m.created_at),pn(m.product_id),TYPE[m.type]||m.type,m.delta,x.expiry||'',x.location||'',m.ref||x.po_no||'',ST[m.status]||m.status,m.by_name||'',m.confirmed_by_name||'',fdt(m.confirmed_at),gn(m.group_id),m.note||''])});
   const users=[[tx('名字','Name'),tx('角色','Role'),tx('登入用的电话 / Email','Login phone / Email'),tx('分组','Group'),tx('状态','Status')]];
   T.profiles.forEach(u=>users.push([u.name,ROLES[u.role]||u.role,u.identifier,gn(u.group_id),u.active?tx('启用','Active'):tx('已停用','Disabled')]));
-  const prods=[[tx('产品','Product'),tx('分类','Category'),tx('每箱件数','Pcs per carton'),tx('单件条码','Item barcode'),tx('整箱条码','Carton barcode'),tx('最低库存(件)','Min stock (pcs)')]];
-  T.products.forEach(r=>{const d=r.data||{};prods.push([d.name,d.cat||'',d.perCtn||'',(d.codes||[]).join(', '),(d.ctnCodes||[]).join(', '),d.minStock||''])});
+  const prods=[[tx('产品','Product'),tx('分类','Category'),tx('每箱件数','Pcs per carton'),tx('单件条码','Item barcode'),tx('整箱条码','Carton barcode'),tx('最低库存(件)','Min stock (pcs)'),tx('SQL 代码','SQL code'),tx('SQL 名称','SQL name')]];
+  T.products.forEach(r=>{const d=r.data||{};prods.push([d.name,d.cat||'',d.perCtn||'',(d.codes||[]).join(', '),(d.ctnCodes||[]).join(', '),d.minStock||'',d.sqlCode||'',d.sqlName||''])});
   const wb=XLSX.utils.book_new(),add=(rows,name,w)=>{const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=w.map(x=>({wch:x}));XLSX.utils.book_append_sheet(wb,ws,name)};
   add(stock,tx('库存现况','Current stock'),[50,13,9,11,11,14,13,16,10]);
   add(recs,tx('全部库存记录','All stock records'),[17,48,16,12,12,12,14,11,14,14,17,10,40]);
@@ -792,7 +792,7 @@ function buildStockSheets(){
   const live=S.batches.filter(b=>b.qty>0);
   const byP={};live.forEach(b=>(byP[b.product_id]??=[]).push(b));
   const split=(pid,q)=>{const c=perCtn(pid);return c>1?[Math.floor(q/c),q-Math.floor(q/c)*c]:[0,q]};
-  const sum=[[tx('产品','Product'),tx('分类','Category'),tx('每箱件数','Pcs per carton'),tx('箱','Cartons'),tx('散装(件)','Loose pcs'),tx('总件数','Total pcs'),tx('最早到期','Earliest expiry'),tx('到期日数量','No. of expiry dates'),tx('货架位置','Location'),tx('状态','Status')]];
+  const sum=[[tx('产品','Product'),tx('分类','Category'),tx('每箱件数','Pcs per carton'),tx('箱','Cartons'),tx('散装(件)','Loose pcs'),tx('总件数','Total pcs'),tx('最早到期','Earliest expiry'),tx('到期日数量','No. of expiry dates'),tx('货架位置','Location'),tx('状态','Status'),tx('SQL 代码','SQL code')]];
   let grand=0;
   S.products.filter(p=>byP[p.id]||A.low.includes(p)).forEach(p=>{
     const l=byP[p.id]||[],tot=l.reduce((n,b)=>n+b.qty,0),[k,r]=split(p.id,tot);grand+=tot;
@@ -800,19 +800,19 @@ function buildStockSheets(){
     if(l.some(b=>daysLeft(b.expiry,today)<0))st.push(tx('已过期','Expired'));
     else if(l.some(b=>{const d=daysLeft(b.expiry,today);return d<=S.alertDays}))st.push(tx('快到期','Expiring soon'));
     if(A.low.includes(p))st.push(tx('低库存','Low stock'));
-    sum.push([p.name,CATSHEET[p.cat]||p.cat||'',p.perCtn||'',k,r,tot,l.map(b=>b.expiry).sort()[0]||'',l.length,[...new Set(l.map(b=>b.location).filter(Boolean))].join(', '),st.join(' / ')]);
+    sum.push([p.name,CATSHEET[p.cat]||p.cat||'',p.perCtn||'',k,r,tot,l.map(b=>b.expiry).sort()[0]||'',l.length,[...new Set(l.map(b=>b.location).filter(Boolean))].join(', '),st.join(' / '),p.sqlCode||'']);
   });
-  sum.push([]);sum.push([tx('合计','Total'),'','','','',grand,'',live.length,'','']);
-  const det=[[tx('产品','Product'),tx('到期日','Expiry date'),tx('剩余天数','Days left'),tx('箱','Cartons'),tx('散装(件)','Loose pcs'),tx('总件数','Total pcs'),tx('货架位置','Location'),tx('收货日期','Received'),tx('PO / DO','PO / DO'),tx('分类','Category')]];
+  sum.push([]);sum.push([tx('合计','Total'),'','','','',grand,'',live.length,'','','']);
+  const det=[[tx('产品','Product'),tx('到期日','Expiry date'),tx('剩余天数','Days left'),tx('箱','Cartons'),tx('散装(件)','Loose pcs'),tx('总件数','Total pcs'),tx('货架位置','Location'),tx('收货日期','Received'),tx('PO / DO','PO / DO'),tx('分类','Category'),tx('SQL 代码','SQL code')]];
   S.products.filter(p=>byP[p.id]).forEach(p=>byP[p.id].sort((a,b)=>a.expiry<b.expiry?-1:1).forEach(b=>{
-    const[k,r]=split(p.id,b.qty);det.push([p.name,b.expiry,daysLeft(b.expiry,today),k,r,b.qty,b.location||'',b.received_date,b.po_no||'',CATSHEET[p.cat]||p.cat||'']);
+    const[k,r]=split(p.id,b.qty);det.push([p.name,b.expiry,daysLeft(b.expiry,today),k,r,b.qty,b.location||'',b.received_date,b.po_no||'',CATSHEET[p.cat]||p.cat||'',p.sqlCode||'']);
   }));
   return{sum,det,today};
 }
 function stockWorkbook(){
   const{sum,det,today}=buildStockSheets();
   const wb=XLSX.utils.book_new();
-  const W=[50,10,12,9,11,11,14,14,16,22];
+  const W=[50,10,12,9,11,11,14,14,16,22,20];
   const mk=(rows,w)=>{const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=w.map(x=>({wch:x}));return ws};
   const TOT=tx('合计','Total');
   const body=sum.slice(1).filter(r=>r.length&&r[0]!==TOT);
@@ -824,7 +824,7 @@ function stockWorkbook(){
     const tot=rows.reduce((n,r)=>n+(+r[5]||0),0);
     XLSX.utils.book_append_sheet(wb,mk([sum[0],...rows,[],[TOT,'','','','',tot,'',rows.length,'','']],W),(c||'Others').slice(0,31));
   });
-  XLSX.utils.book_append_sheet(wb,mk(det,[50,13,11,9,11,11,14,13,16,12]),tx('按到期日明细','By expiry date'));
+  XLSX.utils.book_append_sheet(wb,mk(det,[50,13,11,9,11,11,14,13,16,12,20]),tx('按到期日明细','By expiry date'));
   return{wb,name:'stock-'+today+'.xlsx'};
 }
 
@@ -862,7 +862,7 @@ function invList(){
   const keepB=b=>keep0(b)&&(!ui.invg||(ui.invg==='none'?!b.group_id:b.group_id===ui.invg));
   if(ui.invView==='loc')return invByLoc(t,keepB,today);
   const byP={};S.batches.filter(b=>b.qty>0&&keepB(b)).forEach(b=>(byP[b.product_id]??=[]).push(b));
-  let ps=S.products.filter(p=>t.every(w=>p.name.toLowerCase().includes(w)||(byP[p.id]||[]).some(b=>batchTxt(b).includes(w))));
+  let ps=S.products.filter(p=>t.every(w=>p.name.toLowerCase().includes(w)||(p.sqlCode||'').toLowerCase().includes(w)||(byP[p.id]||[]).some(b=>batchTxt(b).includes(w))));
   ps=f==='low'?ps.filter(p=>A.low.includes(p)):ps.filter(p=>byP[p.id]);
   if(!ps.length)return `<p class="mut" style="text-align:center">${t.length||f?'找不到':'还没有库存。到「📥 进货」点货入库。'}</p>`;
   return ps.map(p=>{
@@ -873,7 +873,7 @@ function invList(){
     const isLow=A.low.includes(p),pc=perCtn(p.id);
     const open=ui.openP===p.id||!!f||(t.length&&ps.length===1);
     return `<div class="card"><div class="row" data-act="openP" data-v="${p.id}"><b class="grow">${esc(p.name)}</b><b>${fmtQty(p.id,tot)}</b></div>
-     <div class="mut">${bs.length} 个到期日 ${ex?`<span class="badge bad">已过期 ${fmtQty(p.id,ex)}</span>`:''} ${near?`<span class="badge warn">快到期 ${fmtQty(p.id,near)}</span>`:''} ${isLow?`<span class="badge bad">低库存 (最低 ${fmtQty(p.id,p.minStock)})</span>`:''}</div>
+     <div class="mut">${p.sqlCode?`<span class="badge gray">SQL ${esc(p.sqlCode)}</span> `:''}${bs.length} 个到期日${ex?`<span class="badge bad">已过期 ${fmtQty(p.id,ex)}</span>`:''} ${near?`<span class="badge warn">快到期 ${fmtQty(p.id,near)}</span>`:''} ${isLow?`<span class="badge bad">低库存 (最低 ${fmtQty(p.id,p.minStock)})</span>`:''}</div>
      ${open?(bs.length?bs.map(b=>batchBlock(p,b,today)).join(''):'<div class="mut">没有库存</div>')+`<div class="row" style="margin-top:8px"><span class="mut">最低库存 (${pc>1?'箱':'件'})</span><input id="ms_${p.id}" type="number" min="0" style="width:90px" value="${p.minStock?+(p.minStock/(pc>1?pc:1)).toFixed(1):''}" data-act="pminstock" data-v="${p.id}" placeholder="不设"><span class="mut">低于这个数量会提醒</span></div>`:'<div class="mut" style="font-size:12px">点一下看每个到期日</div>'}</div>`}).join('');
 }
 function vInv(){
