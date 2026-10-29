@@ -68,7 +68,7 @@ const CATALOG=[{"id":"ff-bt-2","name":"Farm Fresh Salted Butter 200g x 40","cat"
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
-const VERSION='24Oct-15'; // 每次更新会变，用来确认手机拿到的是最新版
+const VERSION='24Oct-16'; // 每次更新会变，用来确认手机拿到的是最新版
 const SB_URL='https://tpynrnihqoruajddwcnw.supabase.co';
 const SB_KEY='sb_publishable_tc0p1gP3D1GXvD8WqR9K1w_2iSX43Zf'; // 公开的 publishable key，安全设定靠数据库 RLS
 const $=s=>document.querySelector(s);
@@ -786,6 +786,7 @@ function computeAlerts(){
   const low=S.products.filter(p=>p.minStock>0&&(tot[p.id]||0)<p.minStock);
   return{expired,soon,low,tot,today};
 }
+const CATSHEET={'UHT':'UHT','鲜奶':'PST','奶粉':'Powder','牛油':'Butter','冰淇淋':'Ice cream','其他':'Others'};
 function buildStockSheets(){
   const A=computeAlerts(),today=A.today;
   const live=S.batches.filter(b=>b.qty>0);
@@ -799,23 +800,31 @@ function buildStockSheets(){
     if(l.some(b=>daysLeft(b.expiry,today)<0))st.push(tx('已过期','Expired'));
     else if(l.some(b=>{const d=daysLeft(b.expiry,today);return d<=S.alertDays}))st.push(tx('快到期','Expiring soon'));
     if(A.low.includes(p))st.push(tx('低库存','Low stock'));
-    sum.push([p.name,p.cat||'',p.perCtn||'',k,r,tot,l.map(b=>b.expiry).sort()[0]||'',l.length,[...new Set(l.map(b=>b.location).filter(Boolean))].join(', '),st.join(' / ')]);
+    sum.push([p.name,CATSHEET[p.cat]||p.cat||'',p.perCtn||'',k,r,tot,l.map(b=>b.expiry).sort()[0]||'',l.length,[...new Set(l.map(b=>b.location).filter(Boolean))].join(', '),st.join(' / ')]);
   });
   sum.push([]);sum.push([tx('合计','Total'),'','','','',grand,'',live.length,'','']);
-  const det=[[tx('产品','Product'),tx('到期日','Expiry date'),tx('剩余天数','Days left'),tx('箱','Cartons'),tx('散装(件)','Loose pcs'),tx('总件数','Total pcs'),tx('货架位置','Location'),tx('收货日期','Received'),tx('PO / DO','PO / DO')]];
+  const det=[[tx('产品','Product'),tx('到期日','Expiry date'),tx('剩余天数','Days left'),tx('箱','Cartons'),tx('散装(件)','Loose pcs'),tx('总件数','Total pcs'),tx('货架位置','Location'),tx('收货日期','Received'),tx('PO / DO','PO / DO'),tx('分类','Category')]];
   S.products.filter(p=>byP[p.id]).forEach(p=>byP[p.id].sort((a,b)=>a.expiry<b.expiry?-1:1).forEach(b=>{
-    const[k,r]=split(p.id,b.qty);det.push([p.name,b.expiry,daysLeft(b.expiry,today),k,r,b.qty,b.location||'',b.received_date,b.po_no||'']);
+    const[k,r]=split(p.id,b.qty);det.push([p.name,b.expiry,daysLeft(b.expiry,today),k,r,b.qty,b.location||'',b.received_date,b.po_no||'',CATSHEET[p.cat]||p.cat||'']);
   }));
   return{sum,det,today};
 }
 function stockWorkbook(){
   const{sum,det,today}=buildStockSheets();
   const wb=XLSX.utils.book_new();
-  const a=XLSX.utils.aoa_to_sheet(sum),b=XLSX.utils.aoa_to_sheet(det);
-  a['!cols']=[{wch:50},{wch:10},{wch:12},{wch:9},{wch:11},{wch:11},{wch:14},{wch:14},{wch:16},{wch:22}];
-  b['!cols']=[{wch:50},{wch:13},{wch:11},{wch:9},{wch:11},{wch:11},{wch:14},{wch:13},{wch:16}];
-  XLSX.utils.book_append_sheet(wb,a,tx('汇总','Summary'));
-  XLSX.utils.book_append_sheet(wb,b,tx('按到期日明细','By expiry date'));
+  const W=[50,10,12,9,11,11,14,14,16,22];
+  const mk=(rows,w)=>{const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=w.map(x=>({wch:x}));return ws};
+  const TOT=tx('合计','Total');
+  const body=sum.slice(1).filter(r=>r.length&&r[0]!==TOT);
+  XLSX.utils.book_append_sheet(wb,mk(sum,W),tx('汇总','Summary'));
+  const order=['UHT','PST','Powder','Butter','Ice cream','Others'];
+  const cats=[...order,...[...new Set(body.map(r=>r[1]))].filter(c=>!order.includes(c))];
+  cats.forEach(c=>{
+    const rows=body.filter(r=>r[1]===c);if(!rows.length)return;
+    const tot=rows.reduce((n,r)=>n+(+r[5]||0),0);
+    XLSX.utils.book_append_sheet(wb,mk([sum[0],...rows,[],[TOT,'','','','',tot,'',rows.length,'','']],W),(c||'Others').slice(0,31));
+  });
+  XLSX.utils.book_append_sheet(wb,mk(det,[50,13,11,9,11,11,14,13,16,12]),tx('按到期日明细','By expiry date'));
   return{wb,name:'stock-'+today+'.xlsx'};
 }
 
