@@ -48,6 +48,9 @@ a{color:var(--green)}
 #sbox_v{position:relative}
 .aim{position:absolute;left:8%;right:8%;top:28%;bottom:28%;border:3px solid rgba(255,255,255,.9);border-radius:10px;box-shadow:0 0 0 999px rgba(0,0,0,.28);pointer-events:none}
 #smsg{min-height:44px;margin:6px 0;font-size:15px}
+#dlgm{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);z-index:40;display:flex;align-items:center;justify-content:center;padding:16px}
+.dlgbox{background:var(--card);color:var(--ink);border-radius:14px;padding:16px;max-width:420px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.dlgtext{font-size:16px;line-height:1.5}
 #toast{position:fixed;left:12px;right:12px;bottom:12px;background:var(--red);color:#fff;padding:10px 14px;border-radius:10px;z-index:30;text-align:center}
 </style>
 </head>
@@ -65,7 +68,7 @@ const CATALOG=[{"id":"ff-bt-2","name":"Farm Fresh Salted Butter 200g x 40","cat"
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
-const VERSION='24Oct-13'; // 每次更新会变，用来确认手机拿到的是最新版
+const VERSION='24Oct-14'; // 每次更新会变，用来确认手机拿到的是最新版
 const SB_URL='https://tpynrnihqoruajddwcnw.supabase.co';
 const SB_KEY='sb_publishable_tc0p1gP3D1GXvD8WqR9K1w_2iSX43Zf'; // 公开的 publishable key，安全设定靠数据库 RLS
 const $=s=>document.querySelector(s);
@@ -139,6 +142,22 @@ new MutationObserver(ms=>{
  window.alert=m=>_al(T(m));window.confirm=m=>_co(T(m));window.prompt=(m,d)=>_pr(T(m),d);}
 const applyLang=()=>{document.documentElement.lang=LANG==='en'?'en':'zh';document.title=tx('Infinity 仓库 / 司机','Infinity Warehouse');if(LANG==='en')trNode(document.body)};
 /*I18N-END*/
+
+/* ---------- 页面内的对话框 (不依赖浏览器自带弹窗，手机/电脑/任何浏览器都能用) ---------- */
+function uiDialog({text,input=false,okText,showCancel=true}){
+  return new Promise(res=>{
+    const m=document.createElement('div');m.id='dlgm';
+    m.innerHTML=`<div class="dlgbox"><div class="dlgtext">${esc(T(text)).replace(/\n/g,'<br>')}</div>${input?'<input id="dlg_in" autocomplete="off" inputmode="numeric" style="margin-top:10px">':''}<div class="row" style="margin-top:14px;justify-content:flex-end">${showCancel?'<button class="btn sec" id="dlg_no">取消</button>':''}<button class="btn" id="dlg_ok">${okText||'确定'}</button></div></div>`;
+    document.body.appendChild(m);
+    const done=v=>{m.remove();res(v)};
+    m.querySelector('#dlg_ok').onclick=()=>done(input?m.querySelector('#dlg_in').value:true);
+    if(showCancel)m.querySelector('#dlg_no').onclick=()=>done(input?null:false);
+    if(input){const i=m.querySelector('#dlg_in');i.focus();i.onkeydown=e=>{if(e.key==='Enter')m.querySelector('#dlg_ok').click()}}
+  });
+}
+const uiConfirm=t=>uiDialog({text:t});
+const uiPrompt=t=>uiDialog({text:t,input:true});
+window.alert=t=>{uiDialog({text:t,showCancel:false})};
 let sb=null;
 /* 共用设备: 登入状态只记在这个网页里 (sessionStorage)，关掉网页就退出 */
 let SHARED=ST.get('infiShared')==='1';
@@ -1019,7 +1038,7 @@ async function onEv(ev){
      break}
    case'cancelEdit':ui.edit=null;break;
    case'edit':ui.edit=v;break;
-   case'del':if(confirm('删除这站?'))S.stops=S.stops.filter(s=>s.id!==v);break;
+   case'del':if(await uiConfirm('删除这站?'))S.stops=S.stops.filter(s=>s.id!==v);break;
    case'dup':{const s=stop(),d=new Date(ui.date);d.setDate(d.getDate()+1);
      S.stops.push({...structuredClone(s),id:id(),date:iso(d),status:'pending',result:'',doneAt:'',receiver:'',items:s.items.map(i=>({...i,unloaded:false,scanned:0}))});alert('已复制到 '+iso(d));break}
    case'up':case'down':{
@@ -1039,7 +1058,7 @@ async function onEv(ev){
      if(S.stockMode){
        await loadStock();
        const stops=dayStops(ui.date,ui.driver),al=allocate(stops);
-       if(al.short.length&&!confirm('⚠ 以下货库存不够或寿命期不够:\n'+al.short.map(x=>`${x.name} 缺 ${fmtQty(x.pid,x.pcs)} (${x.customer})`).join('\n')+'\n\n仍然出发?'))return;
+       if(al.short.length&&!await uiConfirm('⚠ 以下货库存不够或寿命期不够:\n'+al.short.map(x=>`${x.name} 缺 ${fmtQty(x.pid,x.pcs)} (${x.customer})`).join('\n')+'\n\n仍然出发?'))return;
        if(al.out.length){
          const rows=al.out.map(x=>({id:id(),batch_id:x.batch,product_id:x.pid,delta:-x.pcs,type:'load',ref:x.stop,note:ui.date+'|'+ui.driver}));
          const{error}=await sb.from('stock_moves').insert(rows);if(error)throw error;
@@ -1074,11 +1093,11 @@ async function onEv(ev){
      const s=stop();
      if(s.items.some(i=>!i.unloaded)){alert('还有货品没打勾卸货');return}
      const bad=s.items.filter((i,j)=>check(itemExp(L(),s,j,i),s,pidOf(i)).st==='bad');
-     if(bad.length&&!confirm('⚠ '+bad.map(i=>i.name).join(', ')+' 寿命期低于客人要求，确定还是交给客人?'))return;
+     if(bad.length&&!await uiConfirm('⚠ '+bad.map(i=>i.name).join(', ')+' 寿命期低于客人要求，确定还是交给客人?'))return;
      const r=$('#rc_'+v).value.trim();
      Object.assign(s,{status:'delivered',doneAt:new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),receiver:r,result:bad.length?'寿命期低于要求':''});ui.open=null;break}
    case'fail':{
-     const why=prompt('送不到的原因? (客人不在 / 拒收 / 寿命期不够 …)');if(!why)return;
+     const why=await uiPrompt('送不到的原因? (客人不在 / 拒收 / 寿命期不够 …)');if(!why)return;
      const Lx=L();
      if(S.stockMode){ // 货带回仓库 → 库存加回
        const al=(Lx.alloc||[]).filter(x=>x.stop===v);
@@ -1138,13 +1157,13 @@ async function onEv(ev){
      await loadStock();toast('已确认 ✅');break}
    case'pendReject':{
      const m=S.pending.find(x=>x.id===v);if(!m)return;
-     if(!confirm((m.created_by===me.id?'撤销':'退回')+'这笔进货？\n'+(prodById(m.product_id)?.name||'')+' '+fmtQty(m.product_id,m.delta)+(m.created_by===me.id?'':'\n录入的人需要重新录入。')))return;
+     if(!await uiConfirm((m.created_by===me.id?'撤销':'退回')+'这笔进货？\n'+(prodById(m.product_id)?.name||'')+' '+fmtQty(m.product_id,m.delta)+(m.created_by===me.id?'':'\n录入的人需要重新录入。')))return;
      const{data,error}=await sb.from('stock_moves').update({status:'rejected'}).eq('id',v).eq('status','pending').select('id');
      if(error)throw error;if(!data||!data.length)throw new Error('这一笔已经被处理了');
      await loadStock();toast('已退回');break}
    case'pendAll':{
      const ids=S.pending.filter(m=>me.role==='admin'||m.created_by!==me.id).map(m=>m.id);if(!ids.length)return;
-     if(!confirm('确认这 '+ids.length+' 笔进货的数量都对？\n(请先对照实物检查过)'))return;
+     if(!await uiConfirm('确认这 '+ids.length+' 笔进货的数量都对？\n(请先对照实物检查过)'))return;
      const{data,error}=await sb.from('stock_moves').update({status:'confirmed'}).in('id',ids).eq('status','pending').select('id');
      if(error)throw error;
      await loadStock();toast('已确认 '+(data?.length||0)+' 笔 ✅');break}
@@ -1152,11 +1171,11 @@ async function onEv(ev){
      const m=S.pending.find(x=>x.id===v);if(!m)return;
      const b=S.batches.find(x=>x.id===m.batch_id),pr=prodById(m.product_id);
      const c=+$('#pe_ctn').value||0,q=+$('#pe_pcs').value||0,exp=$('#pe_exp').value,loc=$('#pe_loc').value.trim();
-     if(c>0&&!pr.perCtn){const n=Math.round(+prompt('「'+pr.name+'」一箱有几件？(只需要填一次)'));if(!(n>=1))return;pr.perCtn=n}
+     if(c>0&&!pr.perCtn){const n=Math.round(+await uiPrompt('「'+pr.name+'」一箱有几件？(只需要填一次)'));if(!(n>=1))return;pr.perCtn=n}
      const np=Math.round(c*perCtn(m.product_id)+q);
      if(np<=0||!exp){alert('数量和到期日都要填');return}
      const dq=np-m.delta,de=b&&exp!==b.expiry,dl=b&&(loc||null)!==(b.location||null);
-     if((dq||de||dl)&&!confirm('按你核对的数据确认：\n'+pr.name+'\n'+fmtQty(m.product_id,m.delta)+' → '+fmtQty(m.product_id,np)+(de?'\n到期日 '+b.expiry+' → '+exp:'')+'\n？'))return;
+     if((dq||de||dl)&&!await uiConfirm('按你核对的数据确认：\n'+pr.name+'\n'+fmtQty(m.product_id,m.delta)+' → '+fmtQty(m.product_id,np)+(de?'\n到期日 '+b.expiry+' → '+exp:'')+'\n？'))return;
      const{data,error}=await sb.from('stock_moves').update({status:'confirmed'}).eq('id',v).eq('status','pending').select('id');
      if(error)throw error;if(!data||!data.length)throw new Error('这一笔已经被处理了，或你没有权限确认自己录入的');
      if(de||dl){const e2=(await sb.from('batches').update({expiry:exp,location:loc||null}).eq('id',b.id)).error;if(e2)throw e2}
@@ -1192,13 +1211,13 @@ async function onEv(ev){
    case'invEditSave':{
      const b=S.batches.find(x=>x.id===v),pr=prodById(b.product_id);
      const c=+$('#eb_ctn').value||0,q=+$('#eb_pcs').value||0,exp=$('#eb_exp').value,loc=$('#eb_loc').value.trim();
-     if(c>0&&!pr.perCtn){const n=Math.round(+prompt('「'+pr.name+'」一箱有几件？(只需要填一次)'));if(!(n>=1))return;pr.perCtn=n}
+     if(c>0&&!pr.perCtn){const n=Math.round(+await uiPrompt('「'+pr.name+'」一箱有几件？(只需要填一次)'));if(!(n>=1))return;pr.perCtn=n}
      const nq=Math.round(c*perCtn(b.product_id)+q);
      if(nq<0||!exp)return;
      const dq=nq-b.qty,de=exp!==b.expiry,dl=(loc||null)!==(b.location||null);
      if(!dq&&!de&&!dl){ui.editB=null;break}
      const lines=[];if(dq)lines.push('数量从 '+fmtQty(b.product_id,b.qty)+' 改成 '+fmtQty(b.product_id,nq));if(de)lines.push('到期日 '+b.expiry+' → '+exp);if(dl)lines.push('位置 '+(b.location||'-')+' → '+(loc||'-'));
-     if(!confirm(pr.name+'\n'+lines.join('\n')+' ？'))return;
+     if(!await uiConfirm(pr.name+'\n'+lines.join('\n')+' ？'))return;
      if(de||dl){const e1=(await sb.from('batches').update({expiry:exp,location:loc||null}).eq('id',b.id)).error;if(e1)throw e1}
      if(dq||de){
        const note=(dq?'修改数量':'')+(de?(dq?'；':'')+'修改到期日 '+b.expiry+' → '+exp:'');
@@ -1208,7 +1227,7 @@ async function onEv(ev){
    case'invDmgSave':{
      const b=S.batches.find(x=>x.id===v),pr=prodById(b.product_id);
      const c=+$('#dg_ctn').value||0,q=+$('#dg_pcs').value||0,why=$('#dg_reason').value,note=$('#dg_note').value.trim();
-     if(c>0&&!pr.perCtn){const n=Math.round(+prompt('「'+pr.name+'」一箱有几件？(只需要填一次)'));if(!(n>=1))return;pr.perCtn=n}
+     if(c>0&&!pr.perCtn){const n=Math.round(+await uiPrompt('「'+pr.name+'」一箱有几件？(只需要填一次)'));if(!(n>=1))return;pr.perCtn=n}
      const pcs=Math.round(c*perCtn(b.product_id)+q);
      if(pcs<=0){alert('请填要扣掉的数量');return}
      if(pcs>b.qty){alert('超过这一批现有的数量 ('+fmtQty(b.product_id,b.qty)+')');return}
@@ -1224,7 +1243,7 @@ async function onEv(ev){
      else toast('已经在清单里了，直接改数量');
      ui.rvmsg='';break}
    case'rvUndo':{const m=S.moves.find(x=>x.id===v);if(!m)return;
-     if(!confirm('撤销这笔进货？\n'+(prodById(m.product_id)?.name||'')+' +'+fmtQty(m.product_id,m.delta)))return;
+     if(!await uiConfirm('撤销这笔进货？\n'+(prodById(m.product_id)?.name||'')+' +'+fmtQty(m.product_id,m.delta)))return;
      if(m.status==='pending'){
        const{data,error}=await sb.from('stock_moves').update({status:'rejected'}).eq('id',v).eq('status','pending').select('id');
        if(error)throw error;if(!data||!data.length)throw new Error('这一笔已经被处理了');
@@ -1249,10 +1268,10 @@ async function onEv(ev){
        if(!l.pid&&!l.ctn&&!l.pcs&&!l.exp)continue;
        if(!l.pid){alert('有一行没选产品');return}
        const pr=prodById(l.pid);
-       if(+l.ctn>0&&!pr.perCtn){const n=Math.round(+prompt('「'+pr.name+'」一箱有几件？(只需要填一次)'));if(!(n>=1))return;pr.perCtn=n}
+       if(+l.ctn>0&&!pr.perCtn){const n=Math.round(+await uiPrompt('「'+pr.name+'」一箱有几件？(只需要填一次)'));if(!(n>=1))return;pr.perCtn=n}
        const pcs=Math.round((+l.ctn||0)*perCtn(l.pid)+(+l.pcs||0));
        if(pcs<=0||!l.exp){alert('每一行都要填数量和到期日');return}
-       if(l.exp<today&&!confirm(prodById(l.pid).name+' 的到期日 '+l.exp+' 已经过期，确定入库?'))return;
+       if(l.exp<today&&!await uiConfirm(prodById(l.pid).name+' 的到期日 '+l.exp+' 已经过期，确定入库?'))return;
        const bid=id();
        bt.push({id:bid,product_id:l.pid,expiry:l.exp,received_date:r.date||today,po_no:r.po.trim()||null,location:((l.loc||r.loc||'')+'').trim()||null});
        mv.push({id:id(),batch_id:bid,product_id:l.pid,delta:pcs,type:'receive',status:'pending',by_name:me.name,ref:r.po.trim()||null,note:r.po.trim()?'PO '+r.po.trim():null});
@@ -1287,7 +1306,7 @@ async function onEv(ev){
      }
      if(!diffs.length){alert('没有差异（或没填任何数量）');ui.count=false;break}
      const txt=diffs.map(x=>`${prodById(x.b.product_id).name} (到期 ${x.b.expiry}): 系统 ${fmtQty(x.b.product_id,x.b.qty)} → 实际 ${fmtQty(x.b.product_id,x.counted)}`).join('\n');
-     if(!confirm('盘点差异:\n'+txt+'\n\n确认按实际数量修正库存?'))return;
+     if(!await uiConfirm('盘点差异:\n'+txt+'\n\n确认按实际数量修正库存?'))return;
      const{error}=await sb.from('stock_moves').insert(diffs.map(x=>({id:id(),batch_id:x.b.id,product_id:x.b.product_id,delta:x.diff,type:'adjust',note:'盘点 '+iso(new Date())})));
      if(error)throw error;
      ui.count=false;await loadStock();toast('盘点已更新 ✅');break}
@@ -1302,7 +1321,7 @@ async function onEv(ev){
    case'pname':prodById(v).name=t.value.trim()||prodById(v).name;break;
    case'pcat':prodById(v).cat=t.value;break;
    case'pmin':prodById(v).minDays=t.value===''?null:+t.value;break;
-   case'pdel':if(confirm('删除这个产品?'))S.products=S.products.filter(p=>p.id!==v);break;
+   case'pdel':if(await uiConfirm('删除这个产品?'))S.products=S.products.filter(p=>p.id!==v);break;
    case'clrcodes':prodById(v).codes=[];break;
    case'padd':$('#p_bulk').value.split('\n').map(x=>x.trim()).filter(Boolean).forEach(n=>S.products.push({id:id(),name:n,cat:'其他',codes:[],minDays:null}));break;
    case'saveSet':Object.keys(TYPES).forEach(k=>S.minDays[k]=+$('#md_'+k).value||0);toast('已保存 ✅');break;
@@ -1321,7 +1340,7 @@ async function onEv(ev){
      const u=S.users.find(x=>x.id===v);
      ui.note=`${u.name} 的密码已重设\n登入: ${u.identifier}\n新密码: ${pw}`;ui.reset=null;break}
    case'toggleUser':{const u=S.users.find(x=>x.id===v);await adm({action:'setActive',user_id:v,active:!u.active});await loadAll();break}
-   case'delUser':{const u=S.users.find(x=>x.id===v);if(!confirm('删除 '+u.name+'？他的账号会永久删除。'))return;await adm({action:'delete',user_id:v});await loadAll();break}
+   case'delUser':{const u=S.users.find(x=>x.id===v);if(!await uiConfirm('删除 '+u.name+'？他的账号会永久删除。'))return;await adm({action:'delete',user_id:v});await loadAll();break}
    case'urole':{await adm({action:'update',user_id:v,role:t.value});await loadAll();break}
    case'addGroup':{
      const name=$('#g_name').value.trim();if(!name){alert('请填写组名');return}
@@ -1330,7 +1349,7 @@ async function onEv(ev){
      await loadAll();toast('已新增组 ✅');break}
    case'delGroup':{
      const g=S.groups.find(x=>x.id===v);const n=S.users.filter(u=>u.group_id===v).length;
-     if(!confirm('删除「'+g.name+'」？'+(n?'\n组里的 '+n+' 个人会变成未分组。':'')))return;
+     if(!await uiConfirm('删除「'+g.name+'」？'+(n?'\n组里的 '+n+' 个人会变成未分组。':'')))return;
      const{error}=await sb.from('groups').delete().eq('id',v);if(error)throw error;
      await loadAll();toast('已删除');break}
    case'ugroup':{await adm({action:'update',user_id:v,group_id:t.value||null});await loadAll();toast('已更改分组 ✅');break}
@@ -1353,7 +1372,7 @@ async function onEv(ev){
    case'clRun':{
      const cl=ui.cl,w=($('#cl_word')?.value||'').trim().toLowerCase();
      if(w!=='删除'&&w!=='delete'){alert('请先输入「删除」两个字来确认');return}
-     if(!confirm('最后确认：永久删除 '+cl.pv.target+' 的 '+cl.pv.batches+' 个批次、'+cl.pv.records+' 笔记录？\n这个操作无法恢复。'))return;
+     if(!await uiConfirm('最后确认：永久删除 '+cl.pv.target+' 的 '+cl.pv.batches+' 个批次、'+cl.pv.records+' 笔记录？\n这个操作无法恢复。'))return;
      if($('#cl_bk')?.checked){const b=await doBackupJson('infi-backup-before-delete');toast('已先备份 ('+b.counts.stock_moves+' 笔库存记录)')}
      const{data,error}=await sb.rpc('admin_stock_cleanup',{p_mode:cl.mode,p_id:cl.target,p_from:cl.from||null,p_execute:true});
      if(error)throw error;
