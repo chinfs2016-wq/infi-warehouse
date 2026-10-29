@@ -68,7 +68,7 @@ const CATALOG=[{"id":"ff-bt-2","name":"Farm Fresh Salted Butter 200g x 40","cat"
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
-const VERSION='24Oct-17'; // 每次更新会变，用来确认手机拿到的是最新版
+const VERSION='24Oct-18'; // 每次更新会变，用来确认手机拿到的是最新版
 const SB_URL='https://tpynrnihqoruajddwcnw.supabase.co';
 const SB_KEY='sb_publishable_tc0p1gP3D1GXvD8WqR9K1w_2iSX43Zf'; // 公开的 publishable key，安全设定靠数据库 RLS
 const $=s=>document.querySelector(s);
@@ -831,7 +831,7 @@ function stockWorkbook(){
 /* ---------- 库存 (查看 / 修改 / 报损) ---------- */
 function batchBlock(p,b,today,showName){
   const dl=daysLeft(b.expiry,today),pc=perCtn(p.id),k=Math.floor(b.qty/pc),r=b.qty-k*pc;
-  let h=`<div class="item" style="flex-wrap:wrap"><div class="nm">${showName?`<b>${esc(p.name)}</b><br>`:''}到期 <b>${b.expiry}</b> <span class="badge ${dlCls(dl)}">${dl<0?'已过期':'剩 '+dl+' 天'}</span>
+  let h=`<div class="item" style="flex-wrap:wrap"><div class="nm">${showName?`<b>${esc(p.name)}</b>${p.sqlCode?` <span class="badge gray">SQL ${esc(p.sqlCode)}</span>`:''}<br>`:''}到期 <b>${b.expiry}</b> <span class="badge ${dlCls(dl)}">${dl<0?'已过期':'剩 '+dl+' 天'}</span>
     <div class="mut">${fmtQty(p.id,b.qty)}${!showName&&b.location?' · 📍 '+esc(b.location):''} · 收货 ${b.received_date}${b.po_no?' · '+esc(b.po_no):''}${originHtml(b)}</div></div>
     <button class="btn sec sm" data-act="invEdit" data-v="${b.id}">修改</button><button class="btn sec sm" data-act="invDmg" data-v="${b.id}">报损</button></div>`;
   if(ui.editB===b.id)h+=`<div style="padding:10px;background:var(--bg);border-radius:8px;margin-bottom:6px"><b>修改这一批</b>
@@ -872,8 +872,8 @@ function invList(){
     const near=bs.filter(b=>{const d=daysLeft(b.expiry,today);return d>=0&&d<=S.alertDays}).reduce((n,b)=>n+b.qty,0);
     const isLow=A.low.includes(p),pc=perCtn(p.id);
     const open=ui.openP===p.id||!!f||(t.length&&ps.length===1);
-    return `<div class="card"><div class="row" data-act="openP" data-v="${p.id}"><b class="grow">${esc(p.name)}</b><b>${fmtQty(p.id,tot)}</b></div>
-     <div class="mut">${p.sqlCode?`<span class="badge gray">SQL ${esc(p.sqlCode)}</span> `:''}${bs.length} 个到期日${ex?`<span class="badge bad">已过期 ${fmtQty(p.id,ex)}</span>`:''} ${near?`<span class="badge warn">快到期 ${fmtQty(p.id,near)}</span>`:''} ${isLow?`<span class="badge bad">低库存 (最低 ${fmtQty(p.id,p.minStock)})</span>`:''}</div>
+    return `<div class="card"><div class="row" data-act="openP" data-v="${p.id}"><b class="grow">${esc(p.name)}${p.sqlCode?`<br><span class="badge gray">SQL ${esc(p.sqlCode)}</span>`:''}</b><b>${fmtQty(p.id,tot)}</b></div>
+     <div class="mut">${bs.length} 个到期日${ex?`<span class="badge bad">已过期 ${fmtQty(p.id,ex)}</span>`:''} ${near?`<span class="badge warn">快到期 ${fmtQty(p.id,near)}</span>`:''} ${isLow?`<span class="badge bad">低库存 (最低 ${fmtQty(p.id,p.minStock)})</span>`:''}</div>
      ${open?(bs.length?bs.map(b=>batchBlock(p,b,today)).join(''):'<div class="mut">没有库存</div>')+`<div class="row" style="margin-top:8px"><span class="mut">最低库存 (${pc>1?'箱':'件'})</span><input id="ms_${p.id}" type="number" min="0" style="width:90px" value="${p.minStock?+(p.minStock/(pc>1?pc:1)).toFixed(1):''}" data-act="pminstock" data-v="${p.id}" placeholder="不设"><span class="mut">低于这个数量会提醒</span></div>`:'<div class="mut" style="font-size:12px">点一下看每个到期日</div>'}</div>`}).join('');
 }
 function vInv(){
